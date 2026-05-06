@@ -1,0 +1,19 @@
+{
+  "message": "hello",
+  "current_state": {
+    "user_dna": {
+      "hard_nos": [],
+      "soft_likes": [],
+      "past_footprints": []
+    },
+    "trip_context": {
+      "destination": null,
+      "dates": null,
+      "budget": null,
+      "group_size": null,
+      "status_flags": []
+    },
+    "is_brief_complete": false
+  },
+  "chat_history": []
+}

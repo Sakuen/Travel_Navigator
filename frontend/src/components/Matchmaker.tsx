@@ -1,12 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { MapPin, ArrowRight, Loader2, Navigation } from "lucide-react";
 
 export default function Matchmaker({ state, onSelectDestination }: { state: any, onSelectDestination: (dest: any) => void }) {
   const [destinations, setDestinations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
     const fetchDestinations = async () => {
       try {
         const response = await fetch("/api/destinations", {
@@ -14,6 +18,10 @@ export default function Matchmaker({ state, onSelectDestination }: { state: any,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ current_state: state })
         });
+        if (!response.ok) {
+          console.error("Destinations fetch failed:", response.status);
+          return;
+        }
         const data = await response.json();
         setDestinations(data.destinations);
       } catch (error) {
@@ -24,7 +32,7 @@ export default function Matchmaker({ state, onSelectDestination }: { state: any,
     };
 
     fetchDestinations();
-  }, [state]);
+  }, []);
 
   if (loading) {
     return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import Map, { Marker } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -9,8 +9,12 @@ import { Clock, Navigation2, RefreshCw, Loader2, Compass } from "lucide-react";
 export default function Navigator({ state, destination }: { state: any, destination: any }) {
   const [itinerary, setItinerary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
     const fetchItinerary = async () => {
       try {
         const response = await fetch("/api/itinerary", {
@@ -18,6 +22,10 @@ export default function Navigator({ state, destination }: { state: any, destinat
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ current_state: state, destination })
         });
+        if (!response.ok) {
+          console.error("Itinerary fetch failed:", response.status);
+          return;
+        }
         const data = await response.json();
         setItinerary(data);
       } catch (error) {
@@ -28,7 +36,7 @@ export default function Navigator({ state, destination }: { state: any, destinat
     };
 
     fetchItinerary();
-  }, [state, destination]);
+  }, []);
 
   if (loading) {
     return (
@@ -101,6 +109,7 @@ export default function Navigator({ state, destination }: { state: any, destinat
             latitude: itinerary.items[0]?.lat || 0,
             zoom: 12
           }}
+          style={{ width: "100%", height: "100%" }}
           mapStyle="mapbox://styles/mapbox/dark-v11"
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1IjoiZHVtbXkiLCJhIjoiY2x4bHRwbWhzMDJhbjJqb20zZjZtdTNheCJ9.dummy"}
         >

@@ -1,10 +1,15 @@
 import os
+import urllib.request
+import json
 from dotenv import load_dotenv
-load_dotenv(dotenv_path="../.env")
 
-from google import genai
+load_dotenv("../.env")
+api_key = os.getenv("GOOGLE_API_KEY")
+url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
 
-client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
-for m in client.models.list():
-    if "generateContent" in m.supported_actions:
-        print(m.name)
+req = urllib.request.Request(url)
+with urllib.request.urlopen(req) as response:
+    data = json.loads(response.read().decode())
+    for model in data.get("models", []):
+        if "generateContent" in model.get("supportedGenerationMethods", []):
+            print(model["name"])

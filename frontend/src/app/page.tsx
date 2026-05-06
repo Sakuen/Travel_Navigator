@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Compass } from "lucide-react";
+import { Send, Compass, ArrowRight } from "lucide-react";
 import Matchmaker from "../components/Matchmaker";
 import Navigator from "../components/Navigator";
 
@@ -52,6 +52,13 @@ export default function Home() {
         })
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server error:", response.status, errorText);
+        setMessages(prev => [...prev, { role: "assistant", content: "⚠️ The server is temporarily unavailable (it may be overloaded or the API quota has been exceeded). Please wait a moment and try again." }]);
+        return;
+      }
+
       const data = await response.json();
       
       if (data.state_updates) {
@@ -66,6 +73,7 @@ export default function Home() {
       setMessages(prev => [...prev, { role: "assistant", content: data.response_message }]);
     } catch (error) {
       console.error("Chat error:", error);
+      setMessages(prev => [...prev, { role: "assistant", content: "⚠️ Could not reach the server. Please make sure the backend is running and try again." }]);
     } finally {
       setIsLoading(false);
     }
@@ -149,6 +157,17 @@ export default function Home() {
           {/* Input Area */}
           <div className="fixed bottom-0 left-0 w-full bg-gradient-to-t from-neutral-950 via-neutral-950 to-transparent p-4 md:p-8">
             <div className="max-w-3xl mx-auto">
+              {messages.length > 2 && !state.is_brief_complete && (
+                <div className="flex justify-end mb-4">
+                  <button 
+                    onClick={() => setState(prev => ({ ...prev, is_brief_complete: true }))}
+                    className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-200 px-4 py-2 rounded-full transition-colors flex items-center gap-2 border border-neutral-700 shadow-lg"
+                  >
+                    Skip to Destinations
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="relative group">
                 <input
                   type="text"
