@@ -167,51 +167,6 @@
         ]
       },
       {
-        "id": "u3wahsknm",
-        "year": 2025,
-        "country": "Spain",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Gran Canaria",
-            "hotel": "",
-            "lat": 27.95,
-            "lng": -15.58
-          },
-          {
-            "city": "Funchal (Madeira)",
-            "hotel": "",
-            "lat": 32.65,
-            "lng": -16.9
-          },
-          {
-            "city": "La Palma",
-            "hotel": "",
-            "lat": 28.6667,
-            "lng": -17.8333
-          },
-          {
-            "city": "Fuerteventura",
-            "hotel": "",
-            "lat": 28.35,
-            "lng": -14.15
-          },
-          {
-            "city": "Lanzarotte",
-            "hotel": "",
-            "lat": 28.996,
-            "lng": -13.628
-          },
-          {
-            "city": "Grand Canaria",
-            "hotel": "Boutique Hotel Cordial",
-            "lat": 27.983,
-            "lng": -15.583
-          }
-        ]
-      },
-      {
         "id": "ztqo0nhyz",
         "year": 2025,
         "country": "Austria",
@@ -491,14 +446,67 @@
         ]
       },
       {
+        "id": "u3wahsknm",
+        "year": 2025,
+        "title": "AIDA Canary Cruise",
+        "country": "Spain",
+        "rating": 5,
+        "notes": "2nd Canary Cruise",
+        "stops": [
+          {
+            "city": "Gran Canaria",
+            "hotel": "Aida",
+            "lat": 27.95,
+            "lng": -15.58
+          },
+          {
+            "city": "Funchal (Madeira)",
+            "hotel": "Aida",
+            "lat": 32.65,
+            "lng": -16.9
+          },
+          {
+            "city": "La Palma",
+            "hotel": "Aida",
+            "lat": 28.6667,
+            "lng": -17.8333
+          },
+          {
+            "city": "Fuerteventura",
+            "hotel": "Aida",
+            "lat": 28.35,
+            "lng": -14.15
+          },
+          {
+            "city": "Lanzarotte",
+            "hotel": "Aida",
+            "lat": 28.996,
+            "lng": -13.628
+          },
+          {
+            "city": "Teneriffa",
+            "hotel": "Aida",
+            "lat": 28.291564,
+            "lng": -16.62913
+          },
+          {
+            "city": "Grand Canaria",
+            "hotel": "Boutique Hotel Cordial",
+            "lat": 27.9793,
+            "lng": -15.5724
+          }
+        ]
+      },
+      {
         "id": "rbnbc2206",
         "year": 2022,
+        "title": "",
         "country": "Portugal",
         "rating": 5,
         "notes": "",
         "stops": [
           {
-            "city": "Lagos",
+            "city": "Faro",
             "hotel": "Cascade Wellness Resort",
             "lat": 0,
             "lng": 0

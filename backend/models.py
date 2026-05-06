@@ -32,7 +32,9 @@ class PastTripStop(BaseModel):
 class PastTrip(BaseModel):
     id: str
     year: int
+    title: Optional[str] = None
     country: str
+
     rating: int = Field(..., ge=1, le=5)
     notes: Optional[str] = None
     stops: List[PastTripStop] = Field(default_factory=list)

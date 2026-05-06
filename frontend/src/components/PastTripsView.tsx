@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Map, Marker } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Save, Filter } from "lucide-react";
+import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Save, Filter, Edit2, Info, ChevronDown, ChevronUp } from "lucide-react";
 
 const COLORS = [
   "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899", "#06b6d4", "#f97316"
@@ -12,11 +12,14 @@ const COLORS = [
 
 export default function PastTripsView({ username, pastTrips, onUpdate }: { username: string, pastTrips: any[], onUpdate: () => void }) {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState<string>("All");
+  const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
   
-  const [newTrip, setNewTrip] = useState({
+  const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
+    title: "",
     country: "",
     rating: 5,
     notes: "",
@@ -31,37 +34,63 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-  // Derive unique years for filter
   const availableYears = useMemo(() => {
     const years = Array.from(new Set(pastTrips?.map(t => t.year.toString()) || []));
     return ["All", ...years.sort((a,b) => parseInt(b) - parseInt(a))];
   }, [pastTrips]);
 
-  // Color helper based on ID index
   const getTripColor = (tripId: string) => {
     const index = tripId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return COLORS[index % COLORS.length];
   };
 
   const addStop = () => {
-    setNewTrip({
-      ...newTrip,
-      stops: [...newTrip.stops, { city: "", hotel: "" }]
+    setFormData({
+      ...formData,
+      stops: [...formData.stops, { city: "", hotel: "" }]
     });
   };
 
   const removeStop = (idx: number) => {
-    if (newTrip.stops.length === 1) return;
-    setNewTrip({
-      ...newTrip,
-      stops: newTrip.stops.filter((_, i) => i !== idx)
+    if (formData.stops.length === 1) return;
+    setFormData({
+      ...formData,
+      stops: formData.stops.filter((_, i) => i !== idx)
     });
   };
 
   const updateStop = (idx: number, field: string, value: string) => {
-    const stops = [...newTrip.stops];
+    const stops = [...formData.stops];
     stops[idx] = { ...stops[idx], [field]: value };
-    setNewTrip({ ...newTrip, stops });
+    setFormData({ ...formData, stops });
+  };
+
+  const startEdit = (trip: any) => {
+    setEditingId(trip.id);
+    setFormData({
+      year: trip.year,
+      title: trip.title || "",
+      country: trip.country,
+      rating: trip.rating,
+      notes: trip.notes || "",
+      stops: trip.stops || [{ city: "", hotel: "" }]
+    });
+    setIsAdding(true);
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setIsAdding(false);
+    setFormData({
+      year: new Date().getFullYear(),
+      title: "",
+      country: "",
+      rating: 5,
+      notes: "",
+      stops: [{ city: "", hotel: "" }]
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,8 +98,8 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     setLoading(true);
     try {
       const tripData = {
-        ...newTrip,
-        id: Math.random().toString(36).substr(2, 9),
+        ...formData,
+        id: editingId || Math.random().toString(36).substr(2, 9),
       };
 
       const res = await fetch(`/api/users/${username}/past-trips`, {
@@ -81,11 +110,10 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
 
       if (res.ok) {
         onUpdate();
-        setIsAdding(false);
-        setNewTrip({ year: new Date().getFullYear(), country: "", rating: 5, notes: "", stops: [{ city: "", hotel: "" }] });
+        cancelEdit();
       }
     } catch (e) {
-      console.error("Add past trip error:", e);
+      console.error("Save past trip error:", e);
     } finally {
       setLoading(false);
     }
@@ -101,7 +129,6 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     }
   };
 
-  // Filtered trips and pins
   const filteredTrips = useMemo(() => {
     if (selectedYear === "All") return pastTrips || [];
     return pastTrips?.filter(t => t.year.toString() === selectedYear) || [];
@@ -129,26 +156,27 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
             My Travels
           </h2>
           <button 
-            onClick={() => setIsAdding(!isAdding)}
-            className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all"
+            onClick={() => isAdding ? cancelEdit() : setIsAdding(true)}
+            className={`p-2 rounded-xl transition-all ${isAdding ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"}`}
           >
             {isAdding ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
           </button>
         </div>
 
-        {/* Year Filter */}
-        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-           <Filter className="w-4 h-4 text-neutral-600 shrink-0" />
-           {availableYears.map(year => (
-              <button
-                key={year}
-                onClick={() => setSelectedYear(year)}
-                className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shrink-0 ${selectedYear === year ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-neutral-800 text-neutral-500 hover:text-white border border-neutral-700"}`}
-              >
-                 {year}
-              </button>
-           ))}
-        </div>
+        {!isAdding && (
+          <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+            <Filter className="w-4 h-4 text-neutral-600 shrink-0" />
+            {availableYears.map(year => (
+                <button
+                  key={year}
+                  onClick={() => setSelectedYear(year)}
+                  className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shrink-0 ${selectedYear === year ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-neutral-800 text-neutral-500 hover:text-white border border-neutral-700"}`}
+                >
+                  {year}
+                </button>
+            ))}
+          </div>
+        )}
 
         <AnimatePresence>
           {isAdding && (
@@ -159,13 +187,33 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
               onSubmit={handleSubmit}
               className="mb-8 p-6 rounded-3xl bg-neutral-900 border border-emerald-500/30 space-y-6 overflow-hidden shadow-2xl"
             >
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-widest">
+                  {editingId ? "Edit Trip Details" : "New Trip Entry"}
+                </h3>
+                {editingId && (
+                   <button type="button" onClick={cancelEdit} className="text-xs text-neutral-500 hover:text-white">Cancel</button>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Trip Title (e.g. Honeymoon)</label>
+                <input 
+                  type="text" 
+                  value={formData.title} 
+                  onChange={e => setFormData({...formData, title: e.target.value})}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all"
+                  placeholder="Give your trip a name..."
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Year</label>
                   <input 
                     type="number" 
-                    value={newTrip.year} 
-                    onChange={e => setNewTrip({...newTrip, year: parseInt(e.target.value)})}
+                    value={formData.year} 
+                    onChange={e => setFormData({...formData, year: parseInt(e.target.value)})}
                     className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all"
                     required
                   />
@@ -177,8 +225,8 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                       <button 
                         key={r} 
                         type="button"
-                        onClick={() => setNewTrip({...newTrip, rating: r})}
-                        className={`transition-colors ${newTrip.rating >= r ? "text-yellow-400" : "text-neutral-700"}`}
+                        onClick={() => setFormData({...formData, rating: r})}
+                        className={`transition-colors ${formData.rating >= r ? "text-yellow-400" : "text-neutral-700"}`}
                       >
                         <Star className="w-4 h-4 fill-current" />
                       </button>
@@ -191,11 +239,21 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                 <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Country</label>
                 <input 
                   type="text" 
-                  value={newTrip.country} 
-                  onChange={e => setNewTrip({...newTrip, country: e.target.value})}
+                  value={formData.country} 
+                  onChange={e => setFormData({...formData, country: e.target.value})}
                   className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all"
                   placeholder="e.g. Italy"
                   required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Notes & Memories</label>
+                <textarea 
+                  value={formData.notes} 
+                  onChange={e => setFormData({...formData, notes: e.target.value})}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all min-h-[80px]"
+                  placeholder="What was special about this trip?"
                 />
               </div>
 
@@ -210,7 +268,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                       <Plus className="w-3 h-3" /> Add Stop
                     </button>
                  </div>
-                 {newTrip.stops.map((stop, idx) => (
+                 {formData.stops.map((stop, idx) => (
                     <div key={idx} className="p-4 rounded-2xl bg-neutral-800/50 border border-neutral-700/50 space-y-3 relative group/stop">
                        <input 
                           type="text" 
@@ -227,7 +285,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                           className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-[10px] outline-none focus:border-emerald-500"
                           placeholder="Hotel (Optional)"
                        />
-                       {newTrip.stops.length > 1 && (
+                       {formData.stops.length > 1 && (
                           <button 
                             type="button"
                             onClick={() => removeStop(idx)}
@@ -246,7 +304,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                Save Trip History
+                {editingId ? "Update Trip" : "Save Trip History"}
               </button>
             </motion.form>
           )}
@@ -256,6 +314,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
           {filteredTrips.length > 0 ? (
             filteredTrips.sort((a,b) => b.year - a.year).map((trip) => {
               const tripColor = getTripColor(trip.id);
+              const isExpanded = expandedNotes === trip.id;
               return (
                 <div 
                   key={trip.id}
@@ -263,19 +322,20 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                   style={{ borderLeft: `4px solid ${tripColor}` }}
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div>
+                    <div className="flex-1 pr-8">
                       <div className="flex items-center gap-2 text-neutral-500 text-[10px] font-bold uppercase tracking-widest mb-1">
                         <Calendar className="w-3 h-3" />
                         {trip.year}
                       </div>
-                      <h3 className="text-lg font-bold text-neutral-100">{trip.country}</h3>
+                      <h3 className="text-lg font-bold text-neutral-100 leading-tight">
+                        {trip.title || trip.country}
+                      </h3>
+                      {trip.title && <p className="text-xs text-neutral-500">{trip.country}</p>}
                     </div>
-                    <button 
-                      onClick={() => deleteTrip(trip.id)}
-                      className="p-2 text-neutral-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button onClick={() => startEdit(trip)} className="p-2 text-neutral-600 hover:text-emerald-400"><Edit2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => deleteTrip(trip.id)} className="p-2 text-neutral-600 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
                   </div>
 
                   <div className="space-y-3">
@@ -289,6 +349,29 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                         </div>
                     ))}
                   </div>
+
+                  {trip.notes && (
+                    <div className="mt-4 pt-4 border-t border-neutral-800/50">
+                       <button 
+                        onClick={() => setExpandedNotes(isExpanded ? null : trip.id)}
+                        className="flex items-center gap-2 text-[10px] text-neutral-500 hover:text-emerald-400 transition-colors uppercase font-bold tracking-widest mb-2"
+                       >
+                          <Info className="w-3 h-3" /> 
+                          {isExpanded ? "Hide Notes" : "View Notes"}
+                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                       </button>
+                       <AnimatePresence>
+                         {isExpanded && (
+                           <motion.p 
+                            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                            className="text-xs text-neutral-400 italic leading-relaxed"
+                           >
+                              "{trip.notes}"
+                           </motion.p>
+                         )}
+                       </AnimatePresence>
+                    </div>
+                  )}
 
                   <div className="mt-4 flex items-center gap-1">
                     {[1,2,3,4,5].map(r => (
