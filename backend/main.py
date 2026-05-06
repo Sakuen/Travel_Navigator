@@ -83,14 +83,21 @@ def add_past_trip_endpoint(username: str, request: AddPastTripRequest):
     trip_dict = request.trip.model_dump()
     from agent import geocode_location
     
+    first_continent = None
     for stop in trip_dict.get("stops", []):
         if not stop.get("lat") or stop.get("lat") == 0:
             coords = geocode_location(stop["city"], trip_dict["country"])
             stop["lat"] = coords["lat"]
             stop["lng"] = coords["lng"]
+            if not first_continent:
+                first_continent = coords.get("continent")
+            
+    if first_continent and not trip_dict.get("continent"):
+        trip_dict["continent"] = first_continent
             
     db.save_past_trip(username, trip_dict)
     return {"status": "ok"}
+
 
 
 

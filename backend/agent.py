@@ -4,7 +4,7 @@ import traceback
 from typing import List, Dict, Any
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from models import AppStateUpdate, UserDNA, TripContext
 
 import time
@@ -237,13 +237,15 @@ def geocode_location(city: str, country: str, model_name: str = None) -> dict:
     class GeoCoord(BaseModel):
         lat: float
         lng: float
+        continent: str = Field(..., description="The continent this location is in (e.g. Europe, Asia, North America)")
 
     structured_llm = llm.with_structured_output(GeoCoord)
     
-    prompt = f"Provide the approximate latitude and longitude for the center of {city}, {country}."
+    prompt = f"Provide the approximate latitude, longitude, and continent for the center of {city}, {country}."
     
     try:
         result = safe_invoke(structured_llm, [HumanMessage(content=prompt)])
         return result.model_dump()
     except:
-        return {"lat": 0, "lng": 0}
+        return {"lat": 0, "lng": 0, "continent": "Unknown"}
+

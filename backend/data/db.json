@@ -107,39 +107,6 @@
     ],
     "past_trips": [
       {
-        "id": "vkj75xaxy",
-        "year": 2026,
-        "country": "Thailand",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Koh Samui, Lamai",
-            "hotel": "Wild Cottage Lamai",
-            "lat": 9.4678,
-            "lng": 100.0463
-          },
-          {
-            "city": "Koh Samui, Choeng Mon",
-            "hotel": "Melia Koh Samui",
-            "lat": 9.566,
-            "lng": 100.066
-          },
-          {
-            "city": "Koh Samui, Bo Phut",
-            "hotel": "Holiday Inn Resort Samui Bophut",
-            "lat": 9.55,
-            "lng": 100.02
-          },
-          {
-            "city": "Bangkok",
-            "hotel": "Chatrium Grand",
-            "lat": 13.7563,
-            "lng": 100.5018
-          }
-        ]
-      },
-      {
         "id": "rinh7w182",
         "year": 2025,
         "country": "Turkey",
@@ -233,21 +200,6 @@
         ]
       },
       {
-        "id": "6t2uuzkjo",
-        "year": 2018,
-        "country": "Malta",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Valletta",
-            "hotel": "",
-            "lat": 35.9042,
-            "lng": 14.5146
-          }
-        ]
-      },
-      {
         "id": "r2000m5nt",
         "year": 2023,
         "country": "Italy",
@@ -269,21 +221,6 @@
         ]
       },
       {
-        "id": "5cjzjo2t3",
-        "year": 2025,
-        "country": "Spain",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Barcelona",
-            "hotel": "",
-            "lat": 41.3851,
-            "lng": 2.1734
-          }
-        ]
-      },
-      {
         "id": "x2b5r36ur",
         "year": 2023,
         "country": "Spain",
@@ -301,72 +238,6 @@
             "hotel": "",
             "lat": 37.1773,
             "lng": -3.5985
-          }
-        ]
-      },
-      {
-        "id": "wqt4925eq",
-        "year": 2019,
-        "country": "Germany",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Berlin",
-            "hotel": "",
-            "lat": 52.52,
-            "lng": 13.405
-          },
-          {
-            "city": "Hamburg",
-            "hotel": "",
-            "lat": 53.5511,
-            "lng": 9.9937
-          },
-          {
-            "city": "Amsterdam",
-            "hotel": "",
-            "lat": 52.385,
-            "lng": 9.58
-          },
-          {
-            "city": "Rotterdam",
-            "hotel": "",
-            "lat": 51.9225,
-            "lng": 4.47917
-          },
-          {
-            "city": "Antwerpen",
-            "hotel": "",
-            "lat": 51.221,
-            "lng": 4.3997
-          },
-          {
-            "city": "Bruges",
-            "hotel": "",
-            "lat": 51.2093,
-            "lng": 3.2247
-          },
-          {
-            "city": "Cologne",
-            "hotel": "",
-            "lat": 50.9375,
-            "lng": 6.9603
-          }
-        ]
-      },
-      {
-        "id": "hdv4m5z21",
-        "year": 2016,
-        "country": "France",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Paris",
-            "hotel": "",
-            "lat": 48.8566,
-            "lng": 2.3522
           }
         ]
       },
@@ -401,21 +272,6 @@
         ]
       },
       {
-        "id": "oqjlnywuc",
-        "year": 2017,
-        "country": "Hungary",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Budapest",
-            "hotel": "",
-            "lat": 0,
-            "lng": 0
-          }
-        ]
-      },
-      {
         "id": "zkw104jqb",
         "year": 2021,
         "country": "Greece",
@@ -427,21 +283,6 @@
             "hotel": "Potidea Palace",
             "lat": 40.2081,
             "lng": 23.2356
-          }
-        ]
-      },
-      {
-        "id": "q6kfbltn2",
-        "year": 2018,
-        "country": "Greece",
-        "rating": 5,
-        "notes": "",
-        "stops": [
-          {
-            "city": "Santorini (Oia)",
-            "hotel": "Thirea Suites",
-            "lat": 0,
-            "lng": 0
           }
         ]
       },
@@ -498,18 +339,228 @@
         ]
       },
       {
-        "id": "rbnbc2206",
+        "id": "wqt4925eq",
+        "year": 2019,
+        "title": "Interrail Trip",
+        "country": "Germany",
+        "rating": 5,
+        "notes": "",
+        "stops": [
+          {
+            "city": "Berlin",
+            "hotel": "",
+            "lat": 52.52,
+            "lng": 13.405
+          },
+          {
+            "city": "Hamburg",
+            "hotel": "",
+            "lat": 53.5511,
+            "lng": 9.9937
+          },
+          {
+            "city": "Amsterdam",
+            "hotel": "",
+            "lat": 52.385,
+            "lng": 9.58
+          },
+          {
+            "city": "Rotterdam",
+            "hotel": "",
+            "lat": 51.9225,
+            "lng": 4.47917
+          },
+          {
+            "city": "Antwerpen",
+            "hotel": "",
+            "lat": 51.221,
+            "lng": 4.3997
+          },
+          {
+            "city": "Bruges",
+            "hotel": "",
+            "lat": 51.2093,
+            "lng": 3.2247
+          },
+          {
+            "city": "Cologne",
+            "hotel": "",
+            "lat": 50.9375,
+            "lng": 6.9603
+          }
+        ]
+      },
+      {
+        "id": "52w69w7vy",
+        "year": 2018,
+        "title": "Santorini Bday Trip",
+        "country": "Greece",
+        "rating": 5,
+        "notes": "30th birthday of jacky",
+        "stops": [
+          {
+            "city": "Oia",
+            "hotel": "Therreia Suites",
+            "lat": 36.4674,
+            "lng": 25.375
+          }
+        ]
+      },
+      {
+        "id": "mrggp172s",
         "year": 2022,
-        "title": "",
+        "title": "Algarve",
         "country": "Portugal",
         "rating": 5,
         "notes": "",
         "stops": [
           {
-            "city": "Faro",
-            "hotel": "Cascade Wellness Resort",
+            "city": "Lagos",
+            "hotel": "Cascade Wellness Hotel",
+            "lat": 37.102,
+            "lng": -8.674
+          }
+        ]
+      },
+      {
+        "id": "vkj75xaxy",
+        "year": 2026,
+        "title": "",
+        "country": "Thailand",
+        "continent": "",
+        "participants": [
+          "Sascha",
+          "Jacky",
+          "Damian"
+        ],
+        "rating": 5,
+        "notes": "",
+        "stops": [
+          {
+            "city": "Koh Samui, Lamai",
+            "hotel": "Wild Cottage Lamai",
+            "lat": 9.4678,
+            "lng": 100.0463
+          },
+          {
+            "city": "Koh Samui, Choeng Mon",
+            "hotel": "Melia Koh Samui",
+            "lat": 9.566,
+            "lng": 100.066
+          },
+          {
+            "city": "Koh Samui, Bo Phut",
+            "hotel": "Holiday Inn Resort Samui Bophut",
+            "lat": 9.55,
+            "lng": 100.02
+          },
+          {
+            "city": "Bangkok",
+            "hotel": "Chatrium Grand",
+            "lat": 13.7563,
+            "lng": 100.5018
+          }
+        ]
+      },
+      {
+        "id": "5cjzjo2t3",
+        "year": 2025,
+        "title": "",
+        "country": "Spain",
+        "continent": "",
+        "participants": [
+          "Sascha",
+          "Jacky"
+        ],
+        "rating": 5,
+        "notes": "",
+        "stops": [
+          {
+            "city": "Barcelona",
+            "hotel": "",
+            "lat": 41.3851,
+            "lng": 2.1734
+          }
+        ]
+      },
+      {
+        "id": "hdv4m5z21",
+        "year": 2016,
+        "title": "",
+        "country": "France",
+        "continent": "",
+        "participants": [],
+        "rating": 5,
+        "notes": "",
+        "stops": [
+          {
+            "city": "Paris",
+            "hotel": "Sublime Eiffel",
+            "lat": 48.8566,
+            "lng": 2.3522
+          }
+        ]
+      },
+      {
+        "id": "64ionsdbf",
+        "year": 2017,
+        "title": "Budapest",
+        "country": "Hungary",
+        "continent": "",
+        "participants": [],
+        "rating": 5,
+        "notes": "",
+        "stops": [
+          {
+            "city": "Budapest",
+            "hotel": "Prestige Hotel",
+            "lat": 47.4979,
+            "lng": 19.0402
+          }
+        ]
+      },
+      {
+        "id": "6t2uuzkjo",
+        "year": 2018,
+        "title": "",
+        "country": "Malta",
+        "continent": "",
+        "participants": [],
+        "rating": 5,
+        "notes": "",
+        "stops": [
+          {
+            "city": "Valletta",
+            "hotel": "Stonehouse",
+            "lat": 35.9042,
+            "lng": 14.5146
+          }
+        ]
+      },
+      {
+        "id": "nlgivhe6r",
+        "year": 2018,
+        "title": "South Korea & Singapore",
+        "country": "South Korea",
+        "continent": "Unknown",
+        "participants": [
+          "Sascha",
+          "Jacky"
+        ],
+        "rating": 5,
+        "notes": "",
+        "stops": [
+          {
+            "city": "Singapore",
+            "hotel": "Oasia Hotel",
             "lat": 0,
             "lng": 0
+          },
+          {
+            "city": "Seoul",
+            "hotel": "Phraser Place Namdemun",
+            "lat": 37.5665,
+            "lng": 126.978
           }
         ]
       }
