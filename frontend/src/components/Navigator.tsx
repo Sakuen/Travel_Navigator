@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Map, { Marker } from "react-map-gl/mapbox";
+import { Map, Marker } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
 import { Clock, Navigation2, RefreshCw, Loader2, Compass, ArrowLeft, Bookmark, Check, Calendar, AlertCircle } from "lucide-react";
 
 export default function Navigator({ state, destination, savedTripData, selectedModel, onSaveTrip }: { state: any, destination: any, savedTripData?: any, selectedModel: string, onSaveTrip?: (trip: any) => void }) {
@@ -45,7 +46,7 @@ export default function Navigator({ state, destination, savedTripData, selectedM
         setViewState({
           longitude: data.daily_summaries[0].lng,
           latitude: data.daily_summaries[0].lat,
-          zoom: 11
+          zoom: 10
         });
       }
     } catch (error: any) {
@@ -64,7 +65,7 @@ export default function Navigator({ state, destination, savedTripData, selectedM
         setViewState({
           longitude: savedTripData.daily_summaries[0].lng,
           latitude: savedTripData.daily_summaries[0].lat,
-          zoom: 11
+          zoom: 10
         });
       }
       return;
@@ -153,6 +154,7 @@ export default function Navigator({ state, destination, savedTripData, selectedM
   if (!overview) return null;
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const destName = destination?.name || overview.trip_title;
 
   return (
     <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden bg-neutral-950">
@@ -194,17 +196,20 @@ export default function Navigator({ state, destination, savedTripData, selectedM
                   <Clock className="w-4 h-4" />
                   The Journey Breakdown
                 </h3>
-                {overview.daily_summaries.map((day: any) => (
+                {overview.daily_summaries?.map((day: any) => (
                   <button
                     key={day.day_number}
                     onClick={() => handleDaySelect(day)}
                     className="w-full text-left rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 transition-all group overflow-hidden flex flex-col shadow-sm"
                   >
-                    <div className="h-40 w-full relative overflow-hidden">
+                    <div className="h-40 w-full relative overflow-hidden bg-neutral-800">
                       <img 
-                        src={`https://source.unsplash.com/featured/800x600?${encodeURIComponent(destination.name)},${encodeURIComponent(day.image_url || 'travel')}`} 
+                        src={`https://loremflickr.com/800/600/${encodeURIComponent(destName.split(',')[0])},${encodeURIComponent(day.image_url || 'travel')}/all`} 
                         alt={day.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-60"
+                        onError={(e) => {
+                           (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=800&auto=format&fit=crop";
+                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent" />
                       <div className="absolute bottom-4 left-5 flex items-center gap-3">
@@ -235,7 +240,7 @@ export default function Navigator({ state, destination, savedTripData, selectedM
                   setViewState({
                     longitude: overview.daily_summaries[0].lng,
                     latitude: overview.daily_summaries[0].lat,
-                    zoom: 11
+                    zoom: 10
                   });
                 }}
                 className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors mb-4 group"
@@ -301,9 +306,12 @@ export default function Navigator({ state, destination, savedTripData, selectedM
           <Map
             {...viewState}
             onMove={evt => setViewState(evt.viewState)}
-            onLoad={e => e.target.resize()}
-            style={{ width: "100%", height: "100%" }}
-            mapStyle="mapbox://styles/mapbox/dark-v11"
+            onLoad={e => {
+              console.log("Map Loaded");
+              e.target.resize();
+            }}
+            style={{ width: "100%", height: "100%", minHeight: "300px" }}
+            mapStyle="mapbox://styles/mapbox/streets-v12"
             mapboxAccessToken={mapboxToken}
           >
             {!selectedDay ? (

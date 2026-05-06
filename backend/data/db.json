@@ -2,7 +2,11 @@
   "Jacky": {
     "user_dna": {
       "hard_nos": [],
-      "soft_likes": [],
+      "soft_likes": [
+        "beach",
+        "relaxed pace",
+        "1-2 activities per day"
+      ],
       "past_footprints": []
     },
     "saved_trips": []
@@ -15,7 +19,8 @@
         "beaches",
         "relaxed pace",
         "luxury",
-        "adventure"
+        "adventure",
+        "1-2 main activities per day"
       ],
       "past_footprints": []
     },
