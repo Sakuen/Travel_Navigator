@@ -4,11 +4,16 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Map, Marker } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Save } from "lucide-react";
+import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Save, Filter } from "lucide-react";
+
+const COLORS = [
+  "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899", "#06b6d4", "#f97316"
+];
 
 export default function PastTripsView({ username, pastTrips, onUpdate }: { username: string, pastTrips: any[], onUpdate: () => void }) {
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<string>("All");
   
   const [newTrip, setNewTrip] = useState({
     year: new Date().getFullYear(),
@@ -25,6 +30,18 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
   });
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  // Derive unique years for filter
+  const availableYears = useMemo(() => {
+    const years = Array.from(new Set(pastTrips?.map(t => t.year.toString()) || []));
+    return ["All", ...years.sort((a,b) => parseInt(b) - parseInt(a))];
+  }, [pastTrips]);
+
+  // Color helper based on ID index
+  const getTripColor = (tripId: string) => {
+    const index = tripId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return COLORS[index % COLORS.length];
+  };
 
   const addStop = () => {
     setNewTrip({
@@ -84,26 +101,32 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     }
   };
 
-  // Flatten all stops from all trips for the map
+  // Filtered trips and pins
+  const filteredTrips = useMemo(() => {
+    if (selectedYear === "All") return pastTrips || [];
+    return pastTrips?.filter(t => t.year.toString() === selectedYear) || [];
+  }, [pastTrips, selectedYear]);
+
   const allPins = useMemo(() => {
     const pins: any[] = [];
-    pastTrips?.forEach(trip => {
+    filteredTrips.forEach(trip => {
+      const color = getTripColor(trip.id);
       trip.stops?.forEach((stop: any) => {
         if (stop.lat && stop.lng) {
-          pins.push({ ...stop, tripId: trip.id });
+          pins.push({ ...stop, tripId: trip.id, color });
         }
       });
     });
     return pins;
-  }, [pastTrips]);
+  }, [filteredTrips]);
 
   return (
     <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden bg-neutral-950">
       <div className="w-full md:w-[450px] h-full overflow-y-auto border-r border-neutral-800 p-6 bg-neutral-950 z-20 shadow-2xl shrink-0 scroll-smooth">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-neutral-100 flex items-center gap-2">
             <Globe className="w-6 h-6 text-emerald-400" />
-            My Travel History
+            My Travels
           </h2>
           <button 
             onClick={() => setIsAdding(!isAdding)}
@@ -113,6 +136,20 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
           </button>
         </div>
 
+        {/* Year Filter */}
+        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+           <Filter className="w-4 h-4 text-neutral-600 shrink-0" />
+           {availableYears.map(year => (
+              <button
+                key={year}
+                onClick={() => setSelectedYear(year)}
+                className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shrink-0 ${selectedYear === year ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-neutral-800 text-neutral-500 hover:text-white border border-neutral-700"}`}
+              >
+                 {year}
+              </button>
+           ))}
+        </div>
+
         <AnimatePresence>
           {isAdding && (
             <motion.form
@@ -120,7 +157,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleSubmit}
-              className="mb-8 p-6 rounded-3xl bg-neutral-900 border border-emerald-500/30 space-y-6 overflow-hidden"
+              className="mb-8 p-6 rounded-3xl bg-neutral-900 border border-emerald-500/30 space-y-6 overflow-hidden shadow-2xl"
             >
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -129,7 +166,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                     type="number" 
                     value={newTrip.year} 
                     onChange={e => setNewTrip({...newTrip, year: parseInt(e.target.value)})}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500"
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all"
                     required
                   />
                 </div>
@@ -156,14 +193,23 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                   type="text" 
                   value={newTrip.country} 
                   onChange={e => setNewTrip({...newTrip, country: e.target.value})}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500"
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all"
                   placeholder="e.g. Italy"
                   required
                 />
               </div>
 
               <div className="space-y-4">
-                 <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Stops & Locations</label>
+                 <div className="flex justify-between items-center">
+                    <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Stops</label>
+                    <button 
+                      type="button" 
+                      onClick={addStop}
+                      className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" /> Add Stop
+                    </button>
+                 </div>
                  {newTrip.stops.map((stop, idx) => (
                     <div key={idx} className="p-4 rounded-2xl bg-neutral-800/50 border border-neutral-700/50 space-y-3 relative group/stop">
                        <input 
@@ -192,19 +238,12 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                        )}
                     </div>
                  ))}
-                 <button 
-                    type="button" 
-                    onClick={addStop}
-                    className="w-full py-2 rounded-xl border border-dashed border-neutral-700 text-neutral-500 hover:text-emerald-400 hover:border-emerald-500/50 transition-all text-xs font-bold flex items-center justify-center gap-2"
-                 >
-                    <Plus className="w-3 h-3" /> Add Stop
-                 </button>
               </div>
 
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 Save Trip History
@@ -214,50 +253,54 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
         </AnimatePresence>
 
         <div className="space-y-4 pb-20">
-          {pastTrips?.length > 0 ? (
-            pastTrips.sort((a,b) => b.year - a.year).map((trip) => (
-              <div 
-                key={trip.id}
-                className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all group relative overflow-hidden"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">
-                      <Calendar className="w-3 h-3" />
-                      {trip.year}
-                    </div>
-                    <h3 className="text-lg font-bold text-neutral-100">{trip.country}</h3>
-                  </div>
-                  <button 
-                    onClick={() => deleteTrip(trip.id)}
-                    className="p-2 text-neutral-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                   {trip.stops?.map((stop: any, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 pl-2 border-l border-neutral-800">
-                         <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                         <div>
-                            <p className="text-sm font-bold text-neutral-200">{stop.city}</p>
-                            {stop.hotel && <p className="text-[10px] text-neutral-500 flex items-center gap-1"><Building className="w-2.5 h-2.5" /> {stop.hotel}</p>}
-                         </div>
+          {filteredTrips.length > 0 ? (
+            filteredTrips.sort((a,b) => b.year - a.year).map((trip) => {
+              const tripColor = getTripColor(trip.id);
+              return (
+                <div 
+                  key={trip.id}
+                  className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all group relative overflow-hidden"
+                  style={{ borderLeft: `4px solid ${tripColor}` }}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-neutral-500 text-[10px] font-bold uppercase tracking-widest mb-1">
+                        <Calendar className="w-3 h-3" />
+                        {trip.year}
                       </div>
-                   ))}
-                </div>
+                      <h3 className="text-lg font-bold text-neutral-100">{trip.country}</h3>
+                    </div>
+                    <button 
+                      onClick={() => deleteTrip(trip.id)}
+                      className="p-2 text-neutral-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                <div className="mt-4 flex items-center gap-1">
-                   {[1,2,3,4,5].map(r => (
-                      <Star key={r} className={`w-3 h-3 ${trip.rating >= r ? "text-yellow-500 fill-current" : "text-neutral-800"}`} />
-                   ))}
+                  <div className="space-y-3">
+                    {trip.stops?.map((stop: any, idx: number) => (
+                        <div key={idx} className="flex items-start gap-3 pl-2 border-l border-neutral-800">
+                          <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: tripColor }} />
+                          <div>
+                              <p className="text-sm font-bold text-neutral-200">{stop.city}</p>
+                              {stop.hotel && <p className="text-[10px] text-neutral-500 flex items-center gap-1"><Building className="w-2.5 h-2.5" /> {stop.hotel}</p>}
+                          </div>
+                        </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex items-center gap-1">
+                    {[1,2,3,4,5].map(r => (
+                        <Star key={r} className={`w-3 h-3 ${trip.rating >= r ? "text-yellow-500 fill-current" : "text-neutral-800"}`} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center py-20 text-neutral-600 text-sm">
-              No trips recorded yet.
+              No trips match this filter.
             </div>
           )}
         </div>
@@ -279,11 +322,14 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
             {allPins.map((pin, idx) => (
               <Marker key={`${pin.tripId}-${idx}`} longitude={pin.lng} latitude={pin.lat} anchor="bottom">
                 <div className="group relative">
-                   <div className="bg-emerald-500/20 p-1.5 rounded-full border border-emerald-500/50 backdrop-blur-sm hover:scale-125 hover:bg-emerald-500 transition-all cursor-pointer">
-                      <MapPin className="w-5 h-5 text-emerald-400 group-hover:text-white" />
+                   <div 
+                    className="p-1.5 rounded-full border border-white/20 backdrop-blur-sm hover:scale-125 transition-all cursor-pointer shadow-lg"
+                    style={{ backgroundColor: `${pin.color}44`, borderColor: pin.color }}
+                  >
+                      <MapPin className="w-5 h-5" style={{ color: pin.color, fill: `${pin.color}44` }} />
                    </div>
-                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-neutral-900 border border-neutral-800 rounded-lg px-2 py-1 text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl z-50 text-white">
-                      {pin.city}
+                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-neutral-900 border border-neutral-800 rounded-lg px-2 py-1 text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl z-50 text-white border-b-2" style={{ borderBottomColor: pin.color }}>
+                      <span className="font-bold">{pin.city}</span>
                    </div>
                 </div>
               </Marker>
