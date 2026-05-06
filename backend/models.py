@@ -27,6 +27,13 @@ class ChatRequest(BaseModel):
     message: str
     current_state: dict
     chat_history: List[ChatMessage] = Field(default_factory=list)
+    model_name: Optional[str] = "gemini-2.5-flash"
+
+class ItineraryRequest(BaseModel):
+    destination: dict
+    current_state: dict
+    chat_history: List[ChatMessage] = Field(default_factory=list)
+    model_name: Optional[str] = "gemini-2.5-flash"
 
 class DestinationCard(BaseModel):
     id: str = Field(..., description="A short, unique identifier for the destination (e.g., 'kyoto_japan')")
@@ -36,8 +43,27 @@ class DestinationCard(BaseModel):
     the_but: str = Field(..., description="A 1 sentence heads-up about a potential downside (e.g., slightly over budget, long flight)")
     tags: List[str] = Field(default_factory=list, description="3-4 tags summarizing the vibe (e.g., 'Temples', 'Foodie', 'Quiet')")
 
+class DestinationRequest(BaseModel):
+    current_state: dict
+    model_name: Optional[str] = "gemini-2.5-flash"
+
 class DestinationResponse(BaseModel):
     destinations: List[DestinationCard] = Field(..., description="Exactly 3 destination recommendations")
+
+class DailySummary(BaseModel):
+    day_number: int = Field(..., description="The day number (1, 2, 3...)")
+    title: str = Field(..., description="High-level title for the day (e.g., 'Arrival & Roman Ruins')")
+    summary: str = Field(..., description="1-sentence summary of the day's vibe")
+    image_url: Optional[str] = Field(None, description="A keyword for image search representing this day's activity")
+    lat: float = Field(..., description="Central latitude for this day's area")
+
+    lng: float = Field(..., description="Central longitude for this day's area")
+
+class TripOverview(BaseModel):
+    trip_title: str = Field(..., description="A catchy title for the whole trip")
+    total_days: int = Field(..., description="Total duration of the trip")
+    general_summary: str = Field(..., description="A 2-3 sentence overview of the whole journey")
+    daily_summaries: List[DailySummary] = Field(..., description="List of summary cards for each day")
 
 class ItineraryItem(BaseModel):
     time: str = Field(..., description="Time of the activity (e.g., '09:00 AM')")
@@ -48,6 +74,15 @@ class ItineraryItem(BaseModel):
     lng: float = Field(..., description="Approximate longitude")
     action_type: str = Field(..., description="Type of action (e.g., 'Book Now', 'Get Directions', 'View Menu')")
 
-class ItineraryResponse(BaseModel):
-    day: str = Field(..., description="Which day this itinerary represents (e.g., 'Day 1: Arrival & Exploration')")
-    items: List[ItineraryItem] = Field(..., description="List of items in chronological order")
+class DailyItinerary(BaseModel):
+    day_number: int = Field(..., description="The day number")
+    day_title: str = Field(..., description="Full title for the day")
+    items: List[ItineraryItem] = Field(..., description="Detailed hourly items")
+
+class DailyItineraryRequest(BaseModel):
+    destination: dict
+    current_state: dict
+    day_number: int
+    model_name: Optional[str] = "gemini-2.5-flash"
+
+

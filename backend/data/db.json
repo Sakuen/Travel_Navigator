@@ -1,0 +1,111 @@
+{
+  "Jacky": {
+    "user_dna": {
+      "hard_nos": [],
+      "soft_likes": [],
+      "past_footprints": []
+    },
+    "saved_trips": []
+  },
+  "Sascha": {
+    "user_dna": {
+      "hard_nos": [],
+      "soft_likes": [
+        "historical sites",
+        "beaches",
+        "relaxed pace",
+        "luxury",
+        "adventure"
+      ],
+      "past_footprints": []
+    },
+    "saved_trips": [
+      {
+        "trip_title": "Santorini Family Odyssey: Sun, Sea, and Ancient Wonders",
+        "total_days": 10,
+        "general_summary": "Embark on a luxurious 10-day family adventure in Santorini, immersing yourselves in the island's breathtaking volcanic landscapes, pristine beaches, and fascinating ancient history. This relaxed-paced journey balances exploration of Minoan ruins and charming villages with ample time for seaside enjoyment, creating unforgettable memories for all.",
+        "daily_summaries": [
+          {
+            "day_number": 1,
+            "title": "Arrival in Paradise & Fira Charm",
+            "summary": "Settle into your luxurious Santorini accommodation and begin exploring the vibrant capital, Fira, with its caldera views.",
+            "lat": 36.4172,
+            "lng": 25.4419
+          },
+          {
+            "day_number": 2,
+            "title": "Ancient Akrotiri & Red Beach",
+            "summary": "Step back in time at the remarkably preserved Minoan settlement of Akrotiri, followed by a dip at the iconic Red Beach.",
+            "lat": 36.4301,
+            "lng": 25.4708
+          },
+          {
+            "day_number": 3,
+            "title": "Oia's Sunset Spectacle & Ammoudi Bay",
+            "summary": "Experience the world-famous sunset in Oia, and descend to the picturesque Ammoudi Bay for a fresh seafood dinner.",
+            "lat": 36.4593,
+            "lng": 25.4775
+          },
+          {
+            "day_number": 4,
+            "title": "Volcanic Beaches & Hot Springs",
+            "summary": "Explore the unique black sand beaches of Perissa or Kamari and take a rejuvenating boat trip to the volcanic hot springs.",
+            "lat": 36.3996,
+            "lng": 25.4806
+          },
+          {
+            "day_number": 5,
+            "title": "Pyrgos Village & Wine Tasting",
+            "summary": "Wander through the traditional, hilltop village of Pyrgos and enjoy a taste of Santorini's renowned wines.",
+            "lat": 36.3877,
+            "lng": 25.4608
+          },
+          {
+            "day_number": 6,
+            "title": "Caldera Cruise & Thirassia Island",
+            "summary": "Sail across the stunning caldera, visit the volcanic crater, and explore the quieter island of Thirassia.",
+            "lat": 36.4172,
+            "lng": 25.38
+          },
+          {
+            "day_number": 7,
+            "title": "Relaxation & Beach Day",
+            "summary": "Enjoy a leisurely day at one of Santorini's beautiful beaches, perhaps the White Beach accessible by boat.",
+            "lat": 36.4047,
+            "lng": 25.4423
+          },
+          {
+            "day_number": 8,
+            "title": "Megalochori Charm & Local Flavors",
+            "summary": "Discover the charming traditional village of Megalochori, known for its unique architecture and local wineries.",
+            "lat": 36.3759,
+            "lng": 25.4349
+          },
+          {
+            "day_number": 9,
+            "title": "Museums & Firostefani Exploration",
+            "summary": "Visit the Museum of Prehistoric Thera in Fira and explore the scenic village of Firostefani with its iconic blue dome.",
+            "lat": 36.4172,
+            "lng": 25.4419
+          },
+          {
+            "day_number": 10,
+            "title": "Departure from Santorini",
+            "summary": "Enjoy a final Greek breakfast before departing from this magical island.",
+            "lat": 36.4073,
+            "lng": 25.4325
+          }
+        ],
+        "id": "-3869706104278917698"
+      }
+    ]
+  },
+  "Guest": {
+    "user_dna": {
+      "hard_nos": [],
+      "soft_likes": [],
+      "past_footprints": []
+    },
+    "saved_trips": []
+  }
+}

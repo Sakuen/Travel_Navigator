@@ -1,38 +1,41 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { MapPin, ArrowRight, Loader2, Navigation } from "lucide-react";
+import { MapPin, ArrowRight, Loader2, Navigation, RefreshCw } from "lucide-react";
 
-export default function Matchmaker({ state, onSelectDestination }: { state: any, onSelectDestination: (dest: any) => void }) {
+export default function Matchmaker({ state, selectedModel, onSelectDestination }: { state: any, selectedModel: string, onSelectDestination: (dest: any) => void }) {
   const [destinations, setDestinations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const hasFetched = useRef(false);
+
+  const fetchDestinations = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/destinations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_state: state, model_name: selectedModel })
+      });
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      const data = await response.json();
+      setDestinations(data.destinations);
+    } catch (error: any) {
+      console.error("Error fetching destinations:", error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
-
-    const fetchDestinations = async () => {
-      try {
-        const response = await fetch("/api/destinations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ current_state: state })
-        });
-        if (!response.ok) {
-          console.error("Destinations fetch failed:", response.status);
-          return;
-        }
-        const data = await response.json();
-        setDestinations(data.destinations);
-      } catch (error) {
-        console.error("Error fetching destinations:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDestinations();
   }, []);
+
 
   if (loading) {
     return (
@@ -43,6 +46,28 @@ export default function Matchmaker({ state, onSelectDestination }: { state: any,
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-neutral-950">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-6">
+          <Navigation className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-bold text-neutral-100">Something went wrong</h2>
+        <p className="text-neutral-400 mt-2 max-w-md">
+          The server encountered an error while finding your destinations. This is usually temporary.
+        </p>
+        <button 
+          onClick={fetchDestinations}
+          className="mt-8 px-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-semibold rounded-xl transition-all border border-neutral-700 flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex-1 flex flex-col p-6 max-w-6xl mx-auto w-full">

@@ -7,14 +7,15 @@ load_dotenv("../.env")
 key = os.getenv("GOOGLE_API_KEY")
 
 models_to_try = [
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
+    "gemini-flash-latest",
+    "gemini-pro-latest",
+    "gemini-2.0-flash-lite",
+    "gemini-2.0-flash-001",
 ]
 
 for model in models_to_try:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-    payload = json.dumps({"contents": [{"parts": [{"text": "Say hello in one word"}]}]}).encode()
+    payload = json.dumps({"contents": [{"parts": [{"text": "Say hello"}]}]}).encode()
     req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
     try:
         resp = urllib.request.urlopen(req, timeout=10)
@@ -22,12 +23,11 @@ for model in models_to_try:
         text = data["candidates"][0]["content"]["parts"][0]["text"]
         print(f"OK {model}: {text.strip()}")
     except urllib.error.HTTPError as e:
-        body = e.read().decode()[:300]
+        body = e.read().decode()[:500]
         print(f"FAIL {model}: {e.code}")
-        if "limit" in body:
-            import re
-            limit_match = re.search(r'limit: (\d+)', body)
-            if limit_match:
-                print(f"  -> Free tier limit: {limit_match.group(1)} requests")
+        if "quota" in body.lower() or "limit" in body.lower():
+            print(f"  Reason: Quota/Limit hit")
+        else:
+            print(f"  Reason: {body}")
     except Exception as e:
         print(f"FAIL {model}: {e}")

@@ -1,149 +1,331 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
-import Map, { Marker, MapRef } from "react-map-gl/mapbox";
-import "mapbox-gl/dist/mapbox-gl.css";
-import { Clock, Navigation2, RefreshCw, Loader2, Compass } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Map, { Marker } from "react-map-gl/mapbox";
+import { Clock, Navigation2, RefreshCw, Loader2, Compass, ArrowLeft, Bookmark, Check, Calendar, AlertCircle } from "lucide-react";
 
-export default function Navigator({ state, destination }: { state: any, destination: any }) {
-  const [itinerary, setItinerary] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default function Navigator({ state, destination, savedTripData, selectedModel, onSaveTrip }: { state: any, destination: any, savedTripData?: any, selectedModel: string, onSaveTrip?: (trip: any) => void }) {
+  const [overview, setOverview] = useState<any>(savedTripData || null);
+  const [selectedDay, setSelectedDay] = useState<any>(null);
+  const [dayDetail, setDayDetail] = useState<any>(null);
+  const [loading, setLoading] = useState(!savedTripData);
+  const [error, setError] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  
+  // Map State
+  const [viewState, setViewState] = useState({
+    longitude: 0,
+    latitude: 0,
+    zoom: 11
+  });
+  
   const hasFetched = useRef(false);
 
+  const fetchOverview = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/itinerary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_state: state, destination, model_name: selectedModel })
+      });
+      if (!response.ok) throw new Error(`Server error: ${response.status}`);
+      const data = await response.json();
+      
+      if (!data.daily_summaries || data.daily_summaries.length === 0) {
+        throw new Error("No daily plans were generated. Please retry.");
+      }
+
+      setOverview(data);
+      if (data.daily_summaries?.[0]) {
+        setViewState({
+          longitude: data.daily_summaries[0].lng,
+          latitude: data.daily_summaries[0].lat,
+          zoom: 11
+        });
+      }
+    } catch (error: any) {
+      console.error("Error fetching overview:", error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    if (savedTripData) {
+      setOverview(savedTripData);
+      setLoading(false);
+      if (savedTripData.daily_summaries?.[0]) {
+        setViewState({
+          longitude: savedTripData.daily_summaries[0].lng,
+          latitude: savedTripData.daily_summaries[0].lat,
+          zoom: 11
+        });
+      }
+      return;
+    }
+    
     if (hasFetched.current) return;
     hasFetched.current = true;
+    fetchOverview();
+  }, [savedTripData]);
 
-    const fetchItinerary = async () => {
-      try {
-        const response = await fetch("/api/itinerary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ current_state: state, destination })
-        });
-        if (!response.ok) {
-          console.error("Itinerary fetch failed:", response.status);
-          return;
-        }
-        const data = await response.json();
-        setItinerary(data);
-      } catch (error) {
-        console.error("Error fetching itinerary:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleSave = async () => {
+    if (!overview || !state.username) return;
+    setIsSaving(true);
+    try {
+      await fetch(`/api/users/${state.username}/trips`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: state.username, trip: overview })
+      });
+      setIsSaved(true);
+      onSaveTrip?.(overview);
+    } catch (e) {
+      console.error("Save error:", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-    fetchItinerary();
-  }, []);
+  const handleDaySelect = async (day: any) => {
+    setSelectedDay(day);
+    setViewState({
+      longitude: day.lng,
+      latitude: day.lat,
+      zoom: 13
+    });
+    
+    setDetailLoading(true);
+    setDayDetail(null);
+    try {
+      const response = await fetch("/api/itinerary/daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_state: state, destination, day_number: day.day_number, model_name: selectedModel })
+      });
+      if (!response.ok) throw new Error("Daily detail fetch failed");
+      const data = await response.json();
+      setDayDetail(data);
+    } catch (error) {
+      console.error("Error fetching day detail:", error);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] bg-neutral-950">
         <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-6" />
-        <h2 className="text-2xl font-bold tracking-tight text-neutral-100">Drafting the Itinerary...</h2>
-        <p className="text-neutral-400 mt-2">Stitching together times and locations.</p>
+        <h2 className="text-2xl font-bold tracking-tight text-neutral-100">Drafting the Big Picture...</h2>
+        <p className="text-neutral-400 mt-2">Stitching together your entire journey.</p>
       </div>
     );
   }
 
-  if (!itinerary) return null;
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] bg-neutral-950 p-8 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-6">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-bold text-neutral-100">Itinerary Generation Failed</h2>
+        <p className="text-neutral-400 mt-2 max-w-md">
+          {error}. This can happen if the AI encounters a problem while mapping your route.
+        </p>
+        <button 
+          onClick={fetchOverview}
+          className="mt-8 px-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-semibold rounded-xl transition-all border border-neutral-700 flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Retry Generation
+        </button>
+      </div>
+    );
+  }
+
+  if (!overview) return null;
+
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   return (
     <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden bg-neutral-950">
-      {/* Timeline View (Left 40%) */}
-      <div className="w-full md:w-[40%] h-full overflow-y-auto border-r border-neutral-800 p-6 relative">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold tracking-tight text-neutral-100">{itinerary.day}</h2>
-          <p className="text-emerald-400 mt-2 text-lg">{destination.name}</p>
-        </div>
-
-        <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-800 before:to-transparent">
-          {itinerary.items.map((item: any, idx: number) => (
+      {/* Sidebar View */}
+      <div className="w-full md:w-[40%] h-full overflow-y-auto border-r border-neutral-800 p-6 relative bg-neutral-950 z-20 shadow-2xl">
+        <AnimatePresence mode="wait">
+          {!selectedDay ? (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              key={idx}
-              className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
+              key="overview"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-8 pb-12"
             >
-              {/* Timeline marker */}
-              <div className="flex items-center justify-center w-10 h-10 rounded-full border border-neutral-700 bg-neutral-900 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 text-emerald-400">
-                <Clock className="w-4 h-4" />
+              <div className="flex justify-between items-start">
+                <div className="max-w-[70%]">
+                  <h2 className="text-3xl font-bold tracking-tight text-neutral-100 leading-tight">{overview.trip_title}</h2>
+                  <p className="text-emerald-400 mt-2 text-lg font-medium flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    {overview.total_days} Day Journey
+                  </p>
+                </div>
+                {!savedTripData && (
+                  <button 
+                    onClick={handleSave}
+                    disabled={isSaving || isSaved}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${isSaved ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400" : "bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-emerald-500/50"}`}
+                  >
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+                    {isSaved ? "Saved" : "Save Journey"}
+                  </button>
+                )}
               </div>
               
-              {/* Card */}
-              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-5 rounded-2xl bg-neutral-900 border border-neutral-800 shadow-xl hover:border-emerald-500/50 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-emerald-400">{item.time}</span>
-                  <span className="px-2 py-1 bg-neutral-800 rounded-md text-[10px] uppercase tracking-wider font-bold text-neutral-300">
-                    {item.action_type}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-neutral-100 mb-1">{item.title}</h3>
-                <p className="text-sm text-neutral-400 mb-4">{item.description}</p>
-                <div className="flex items-center gap-2 text-xs text-neutral-500 font-medium">
-                  <Navigation2 className="w-3 h-3" />
-                  {item.location_name}
-                </div>
+              <p className="text-neutral-400 leading-relaxed text-sm bg-neutral-900/50 p-4 rounded-2xl border border-neutral-800/50">{overview.general_summary}</p>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  The Journey Breakdown
+                </h3>
+                {overview.daily_summaries.map((day: any) => (
+                  <button
+                    key={day.day_number}
+                    onClick={() => handleDaySelect(day)}
+                    className="w-full text-left rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 transition-all group overflow-hidden flex flex-col shadow-sm"
+                  >
+                    <div className="h-40 w-full relative overflow-hidden">
+                      <img 
+                        src={`https://source.unsplash.com/featured/800x600?${encodeURIComponent(destination.name)},${encodeURIComponent(day.image_url || 'travel')}`} 
+                        alt={day.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-60"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent" />
+                      <div className="absolute bottom-4 left-5 flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                          {day.day_number}
+                        </div>
+                        <h4 className="font-bold text-white text-lg drop-shadow-md">{day.title}</h4>
+                      </div>
+                    </div>
+                    <div className="p-5 pt-3">
+                      <p className="text-xs text-neutral-400 leading-relaxed line-clamp-2">{day.summary}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
             </motion.div>
-          ))}
-        </div>
+          ) : (
+            <motion.div
+              key="detail"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-6"
+            >
+              <button 
+                onClick={() => {
+                  setSelectedDay(null);
+                  setViewState({
+                    longitude: overview.daily_summaries[0].lng,
+                    latitude: overview.daily_summaries[0].lat,
+                    zoom: 11
+                  });
+                }}
+                className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors mb-4 group"
+              >
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                Back to Overview
+              </button>
 
-        {/* Remix Button */}
-        <div className="sticky bottom-6 flex justify-center mt-8">
-          <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg shadow-emerald-900/20 font-semibold transition-transform hover:scale-105 active:scale-95">
-            <RefreshCw className="w-4 h-4" />
-            Remix this day
-          </button>
-        </div>
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-xl">
+                  {selectedDay.day_number}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-neutral-100">{selectedDay.title}</h2>
+                  <p className="text-emerald-400 text-sm font-medium">Daily Schedule</p>
+                </div>
+              </div>
+
+              {detailLoading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-4" />
+                  <p className="text-neutral-400">Generating daily plan...</p>
+                </div>
+              ) : dayDetail ? (
+                <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:bg-neutral-800">
+                  {dayDetail.items.map((item: any, idx: number) => (
+                    <div key={idx} className="relative pl-12">
+                      <div className="absolute left-3 top-1 w-4 h-4 rounded-full bg-neutral-900 border-2 border-emerald-500 z-10 shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
+                      <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 shadow-sm hover:border-neutral-700 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-emerald-400">{item.time}</span>
+                          <span className="text-[10px] uppercase tracking-tighter px-2 py-0.5 bg-neutral-800 rounded text-neutral-400 border border-neutral-700">{item.action_type}</span>
+                        </div>
+                        <h4 className="font-bold text-neutral-100 text-sm">{item.title}</h4>
+                        <p className="text-xs text-neutral-400 mt-1 leading-relaxed">{item.description}</p>
+                        <div className="flex items-center gap-1 text-[10px] text-neutral-500 mt-3 bg-black/20 p-2 rounded-lg">
+                          <Navigation2 className="w-3 h-3 text-emerald-500" />
+                          {item.location_name}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-neutral-500 text-center py-10 italic">Select a day to see details</p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Mapbox View (Right 60%) */}
-      <div className="w-full md:w-[60%] h-[50vh] md:h-full bg-neutral-900 relative">
-        {(() => {
-          const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-          if (!mapboxToken) {
-            return (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10 p-8 text-center flex-col">
-                <Compass className="w-16 h-16 text-neutral-500 mb-4 animate-pulse" />
-                <h3 className="text-xl font-bold text-white">Mapbox Token Required</h3>
-                <p className="text-neutral-400 max-w-md mt-2">
-                  To view the interactive route, add your NEXT_PUBLIC_MAPBOX_TOKEN to the .env.local file.
-                  The coordinates ({itinerary.items[0]?.lat}, {itinerary.items[0]?.lng}) are ready to map!
-                </p>
-              </div>
-            );
-          }
-          return (
-            <Map
-              ref={(ref) => {
-                if (ref) {
-                  // Force resize after mount to fix black screen issue
-                  setTimeout(() => ref.getMap()?.resize(), 100);
-                }
-              }}
-              initialViewState={{
-                longitude: itinerary.items[0]?.lng || 0,
-                latitude: itinerary.items[0]?.lat || 0,
-                zoom: 12
-              }}
-              style={{ width: "100%", height: "100%" }}
-              mapStyle="mapbox://styles/mapbox/dark-v11"
-              mapboxAccessToken={mapboxToken}
-            >
-              {itinerary.items.map((item: any, idx: number) => (
-                <Marker key={idx} longitude={item.lng} latitude={item.lat} anchor="bottom">
-                  <div className="bg-emerald-500 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-lg transform -translate-y-4 cursor-pointer hover:scale-110 transition-transform">
-                    {idx + 1}
+      {/* Map View */}
+      <div className="w-full md:w-[60%] h-[40vh] md:h-full bg-neutral-950 relative z-10 border-t md:border-t-0 border-neutral-800">
+        {!mapboxToken ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10 p-8 text-center flex-col">
+            <Compass className="w-16 h-16 text-neutral-500 mb-4 animate-pulse" />
+            <h3 className="text-xl font-bold text-white">Mapbox Token Required</h3>
+            <p className="text-neutral-400 max-w-md mt-2 text-sm">
+              Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local to see the route.
+            </p>
+          </div>
+        ) : (
+          <Map
+            {...viewState}
+            onMove={evt => setViewState(evt.viewState)}
+            onLoad={e => e.target.resize()}
+            style={{ width: "100%", height: "100%" }}
+            mapStyle="mapbox://styles/mapbox/dark-v11"
+            mapboxAccessToken={mapboxToken}
+          >
+            {!selectedDay ? (
+              overview.daily_summaries?.map((day: any) => (
+                <Marker key={day.day_number} longitude={day.lng} latitude={day.lat} anchor="bottom">
+                  <div 
+                    onClick={() => handleDaySelect(day)}
+                    className="bg-emerald-500 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-[0_0_20px_rgba(16,185,129,0.4)] border-2 border-white cursor-pointer hover:scale-125 transition-transform"
+                  >
+                    {day.day_number}
                   </div>
                 </Marker>
-              ))}
-            </Map>
-          );
-        })()}
+              ))
+            ) : dayDetail?.items.map((item: any, idx: number) => (
+              <Marker key={idx} longitude={item.lng} latitude={item.lat} anchor="bottom">
+                <div className="bg-white w-7 h-7 rounded-full flex items-center justify-center text-emerald-600 font-bold shadow-xl border-2 border-emerald-500 hover:scale-110 transition-transform">
+                  {idx + 1}
+                </div>
+              </Marker>
+            ))}
+          </Map>
+        )}
       </div>
     </div>
   );

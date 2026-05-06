@@ -6,10 +6,11 @@ from dotenv import load_dotenv
 # Load environment variables from the parent directory
 load_dotenv(dotenv_path="../.env")
 
-from models import ChatRequest
-from agent import process_chat, generate_destinations, generate_itinerary
+from models import ChatRequest, DestinationRequest, ItineraryRequest, DailyItineraryRequest
+from agent import process_chat, generate_destinations, generate_itinerary_overview, generate_daily_itinerary
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import db
 
 app = FastAPI(title="Lighthouse Navigator API")
 
@@ -42,22 +43,54 @@ def health_check():
 
 @app.post("/api/chat")
 def chat_endpoint(request: ChatRequest):
-    result = process_chat(request.message, request.current_state, request.chat_history)
+    print(f"Chat request: {request.message} (Model: {request.model_name})")
+    result = process_chat(request.message, request.current_state, request.chat_history, model_name=request.model_name)
+    
+    # Auto-persist DNA
+    username = request.current_state.get("username")
+    if username and username != "Guest" and result.get("state_updates"):
+        dna = result["state_updates"].get("user_dna")
+        if dna:
+            db.update_user_dna(username, dna)
     return result
 
-class DestinationRequest(BaseModel):
-    current_state: dict
+@app.get("/api/users/{username}")
+def get_user_endpoint(username: str):
+    return db.get_user_data(username)
+
+@app.delete("/api/users/{username}/dna")
+def reset_dna_endpoint(username: str):
+    db.reset_user_dna(username)
+    return {"status": "ok"}
+
+class SaveTripRequest(BaseModel):
+    username: str
+    trip: dict
+
+@app.post("/api/users/{username}/trips")
+def save_trip_endpoint(username: str, request: SaveTripRequest):
+    db.save_user_trip(username, request.trip)
+    return {"status": "ok"}
+
+@app.delete("/api/users/{username}/trips/{trip_id}")
+def delete_trip_endpoint(username: str, trip_id: str):
+    db.delete_user_trip(username, trip_id)
+    return {"status": "ok"}
 
 @app.post("/api/destinations")
 def destinations_endpoint(request: DestinationRequest):
-    result = generate_destinations(request.current_state)
+    print(f"Destinations request (Model: {request.model_name})")
+    result = generate_destinations(request.current_state, model_name=request.model_name)
     return result
-
-class ItineraryRequest(BaseModel):
-    destination: dict
-    current_state: dict
 
 @app.post("/api/itinerary")
 def itinerary_endpoint(request: ItineraryRequest):
-    result = generate_itinerary(request.destination, request.current_state)
+    print(f"Itinerary request for: {request.destination.get('name')} (Model: {request.model_name})")
+    result = generate_itinerary_overview(request.destination, request.current_state, model_name=request.model_name)
+    return result
+
+@app.post("/api/itinerary/daily")
+def daily_itinerary_endpoint(request: DailyItineraryRequest):
+    print(f"Daily Itinerary request Day {request.day_number} (Model: {request.model_name})")
+    result = generate_daily_itinerary(request.destination, request.current_state, request.day_number, model_name=request.model_name)
     return result
