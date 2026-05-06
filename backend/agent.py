@@ -9,9 +9,10 @@ from models import AppStateUpdate, UserDNA, TripContext
 
 import time
 
-def get_llm(model_name: str = "gemini-1.5-flash"):
+def get_llm(model_name: str = "gemini-2.5-flash"):
     # Fallback to flash if none provided
-    actual_model = model_name or "gemini-1.5-flash"
+    actual_model = model_name or "gemini-2.5-flash"
+
     return ChatGoogleGenerativeAI(
         model=actual_model,
         temperature=0.7,
@@ -59,7 +60,9 @@ CRITICAL INSTRUCTIONS:
 3. Conversation Flow:
    - Be conversational and warm. Don't ask more than 2 questions at a time.
    - Once all essential info is gathered, tell the user you're ready to find their perfect matches and set 'is_brief_complete' to true.
+   - **Re-discovery Logic**: If the user has 'past_trips' in their profile, generally avoid those destinations for new recommendations UNLESS the trip was more than 2 years ago AND the user gave it a high rating (4 or 5 stars). If they loved it and it's been a while, you can suggest it as a 'Re-discovery' match.
    - If the user explicitly says "skip" or "show me anything", respect their choice and set 'is_brief_complete' to true.
+
 
 Current State:
 {current_state}
@@ -169,8 +172,10 @@ def generate_itinerary_overview(destination: dict, current_state: dict, model_na
     Requirements:
     - Summarize the whole journey in 2-3 sentences.
     - Provide a DailySummary card for each day (up to the duration requested, or 5 days if unknown).
+    - **Logical Flow**: Ensure the locations for each day follow a logical travel sequence (minimize travel time, group nearby activities).
     - Provide a 'image_url' keyword for each day (1-2 words for Unsplash search, e.g. 'temple', 'pasta', 'sunset').
     - Give approximate real-world coordinates (lat, lng) for the central location of each day.
+
 
     """
     
@@ -226,3 +231,19 @@ def generate_daily_itinerary(destination: dict, current_state: dict, day_number:
             "items": []
         }
 
+def geocode_location(city: str, country: str, model_name: str = None) -> dict:
+    llm = get_llm(model_name)
+    
+    class GeoCoord(BaseModel):
+        lat: float
+        lng: float
+
+    structured_llm = llm.with_structured_output(GeoCoord)
+    
+    prompt = f"Provide the approximate latitude and longitude for the center of {city}, {country}."
+    
+    try:
+        result = safe_invoke(structured_llm, [HumanMessage(content=prompt)])
+        return result.model_dump()
+    except:
+        return {"lat": 0, "lng": 0}

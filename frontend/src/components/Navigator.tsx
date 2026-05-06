@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Map, Marker } from "react-map-gl/mapbox";
+import { Map, Marker, Source, Layer } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Clock, Navigation2, RefreshCw, Loader2, Compass, ArrowLeft, Bookmark, Check, Calendar, AlertCircle } from "lucide-react";
 
@@ -16,7 +16,6 @@ export default function Navigator({ state, destination, savedTripData, selectedM
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   
-  // Map State
   const [viewState, setViewState] = useState({
     longitude: 0,
     latitude: 0,
@@ -76,24 +75,6 @@ export default function Navigator({ state, destination, savedTripData, selectedM
     fetchOverview();
   }, [savedTripData]);
 
-  const handleSave = async () => {
-    if (!overview || !state.username) return;
-    setIsSaving(true);
-    try {
-      await fetch(`/api/users/${state.username}/trips`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: state.username, trip: overview })
-      });
-      setIsSaved(true);
-      onSaveTrip?.(overview);
-    } catch (e) {
-      console.error("Save error:", e);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleDaySelect = async (day: any) => {
     setSelectedDay(day);
     setViewState({
@@ -120,12 +101,34 @@ export default function Navigator({ state, destination, savedTripData, selectedM
     }
   };
 
+  const routeData = useMemo(() => {
+    if (selectedDay && dayDetail?.items) {
+      return {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: dayDetail.items.map((i: any) => [i.lng, i.lat])
+        }
+      };
+    } else if (overview?.daily_summaries) {
+      return {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: overview.daily_summaries.map((d: any) => [d.lng, d.lat])
+        }
+      };
+    }
+    return null;
+  }, [selectedDay, dayDetail, overview]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] bg-neutral-950">
         <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-6" />
-        <h2 className="text-2xl font-bold tracking-tight text-neutral-100">Drafting the Big Picture...</h2>
-        <p className="text-neutral-400 mt-2">Stitching together your entire journey.</p>
+        <h2 className="text-2xl font-bold text-neutral-100">Drafting the Big Picture...</h2>
       </div>
     );
   }
@@ -133,19 +136,11 @@ export default function Navigator({ state, destination, savedTripData, selectedM
   if (error) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] bg-neutral-950 p-8 text-center">
-        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-6">
-          <AlertCircle className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-neutral-100">Itinerary Generation Failed</h2>
-        <p className="text-neutral-400 mt-2 max-w-md">
-          {error}. This can happen if the AI encounters a problem while mapping your route.
-        </p>
-        <button 
-          onClick={fetchOverview}
-          className="mt-8 px-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-semibold rounded-xl transition-all border border-neutral-700 flex items-center gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Retry Generation
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold text-neutral-100">Generation Failed</h2>
+        <p className="text-neutral-400 mt-2">{error}</p>
+        <button onClick={fetchOverview} className="mt-6 px-6 py-2 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-all flex items-center gap-2">
+          <RefreshCw className="w-4 h-4" /> Retry
         </button>
       </div>
     );
@@ -158,8 +153,8 @@ export default function Navigator({ state, destination, savedTripData, selectedM
 
   return (
     <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden bg-neutral-950">
-      {/* Sidebar View */}
-      <div className="w-full md:w-[40%] h-full overflow-y-auto border-r border-neutral-800 p-6 relative bg-neutral-950 z-20 shadow-2xl">
+      {/* Sidebar - Fixed width on desktop */}
+      <div className="w-full md:w-[450px] lg:w-[500px] h-full overflow-y-auto border-r border-neutral-800 p-6 relative bg-neutral-950 z-20 shadow-2xl shrink-0">
         <AnimatePresence mode="wait">
           {!selectedDay ? (
             <motion.div
@@ -177,16 +172,6 @@ export default function Navigator({ state, destination, savedTripData, selectedM
                     {overview.total_days} Day Journey
                   </p>
                 </div>
-                {!savedTripData && (
-                  <button 
-                    onClick={handleSave}
-                    disabled={isSaving || isSaved}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${isSaved ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400" : "bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-emerald-500/50"}`}
-                  >
-                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-                    {isSaved ? "Saved" : "Save Journey"}
-                  </button>
-                )}
               </div>
               
               <p className="text-neutral-400 leading-relaxed text-sm bg-neutral-900/50 p-4 rounded-2xl border border-neutral-800/50">{overview.general_summary}</p>
@@ -202,14 +187,11 @@ export default function Navigator({ state, destination, savedTripData, selectedM
                     onClick={() => handleDaySelect(day)}
                     className="w-full text-left rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 transition-all group overflow-hidden flex flex-col shadow-sm"
                   >
-                    <div className="h-40 w-full relative overflow-hidden bg-neutral-800">
+                    <div className="h-32 w-full relative overflow-hidden bg-neutral-800">
                       <img 
                         src={`https://loremflickr.com/800/600/${encodeURIComponent(destName.split(',')[0])},${encodeURIComponent(day.image_url || 'travel')}/all`} 
                         alt={day.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-60"
-                        onError={(e) => {
-                           (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=800&auto=format&fit=crop";
-                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent" />
                       <div className="absolute bottom-4 left-5 flex items-center gap-3">
@@ -219,7 +201,7 @@ export default function Navigator({ state, destination, savedTripData, selectedM
                         <h4 className="font-bold text-white text-lg drop-shadow-md">{day.title}</h4>
                       </div>
                     </div>
-                    <div className="p-5 pt-3">
+                    <div className="p-4 pt-2">
                       <p className="text-xs text-neutral-400 leading-relaxed line-clamp-2">{day.summary}</p>
                     </div>
                   </button>
@@ -292,28 +274,36 @@ export default function Navigator({ state, destination, savedTripData, selectedM
         </AnimatePresence>
       </div>
 
-      {/* Map View */}
-      <div className="w-full md:w-[60%] h-[40vh] md:h-full bg-neutral-950 relative z-10 border-t md:border-t-0 border-neutral-800">
+      {/* Map - Fills remaining space */}
+      <div className="flex-1 h-full bg-neutral-950 relative z-10">
         {!mapboxToken ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10 p-8 text-center flex-col">
-            <Compass className="w-16 h-16 text-neutral-500 mb-4 animate-pulse" />
-            <h3 className="text-xl font-bold text-white">Mapbox Token Required</h3>
-            <p className="text-neutral-400 max-w-md mt-2 text-sm">
-              Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local to see the route.
-            </p>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10 p-8 text-center flex-col text-white">
+            Mapbox Token Required
           </div>
         ) : (
           <Map
             {...viewState}
             onMove={evt => setViewState(evt.viewState)}
-            onLoad={e => {
-              console.log("Map Loaded");
-              e.target.resize();
-            }}
-            style={{ width: "100%", height: "100%", minHeight: "300px" }}
-            mapStyle="mapbox://styles/mapbox/streets-v12"
+            onLoad={e => e.target.resize()}
+            style={{ width: "100%", height: "100%" }}
+            mapStyle="mapbox://styles/mapbox/dark-v11"
             mapboxAccessToken={mapboxToken}
           >
+            {routeData && (
+              <Source id="route" type="geojson" data={routeData}>
+                <Layer
+                  id="route-line"
+                  type="line"
+                  paint={{
+                    "line-color": "#10b981",
+                    "line-width": 3,
+                    "line-dasharray": [2, 1],
+                    "line-opacity": 0.6
+                  }}
+                />
+              </Source>
+            )}
+
             {!selectedDay ? (
               overview.daily_summaries?.map((day: any) => (
                 <Marker key={day.day_number} longitude={day.lng} latitude={day.lat} anchor="bottom">

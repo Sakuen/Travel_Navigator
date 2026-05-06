@@ -23,7 +23,27 @@ class ChatMessage(BaseModel):
     role: str
     content: str
 
+class PastTripStop(BaseModel):
+    city: str
+    hotel: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+class PastTrip(BaseModel):
+    id: str
+    year: int
+    country: str
+    rating: int = Field(..., ge=1, le=5)
+    notes: Optional[str] = None
+    stops: List[PastTripStop] = Field(default_factory=list)
+
+class AddPastTripRequest(BaseModel):
+
+    username: str
+    trip: PastTrip
+
 class ChatRequest(BaseModel):
+
     message: str
     current_state: dict
     chat_history: List[ChatMessage] = Field(default_factory=list)

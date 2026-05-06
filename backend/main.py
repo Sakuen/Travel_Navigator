@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 # Load environment variables from the parent directory
 load_dotenv(dotenv_path="../.env")
 
-from models import ChatRequest, DestinationRequest, ItineraryRequest, DailyItineraryRequest
+from models import ChatRequest, DestinationRequest, ItineraryRequest, DailyItineraryRequest, AddPastTripRequest
 from agent import process_chat, generate_destinations, generate_itinerary_overview, generate_daily_itinerary
+
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import db
@@ -76,6 +77,28 @@ def save_trip_endpoint(username: str, request: SaveTripRequest):
 def delete_trip_endpoint(username: str, trip_id: str):
     db.delete_user_trip(username, trip_id)
     return {"status": "ok"}
+
+@app.post("/api/users/{username}/past-trips")
+def add_past_trip_endpoint(username: str, request: AddPastTripRequest):
+    trip_dict = request.trip.model_dump()
+    from agent import geocode_location
+    
+    for stop in trip_dict.get("stops", []):
+        if not stop.get("lat") or stop.get("lat") == 0:
+            coords = geocode_location(stop["city"], trip_dict["country"])
+            stop["lat"] = coords["lat"]
+            stop["lng"] = coords["lng"]
+            
+    db.save_past_trip(username, trip_dict)
+    return {"status": "ok"}
+
+
+
+@app.delete("/api/users/{username}/past-trips/{trip_id}")
+def delete_past_trip_endpoint(username: str, trip_id: str):
+    db.delete_past_trip(username, trip_id)
+    return {"status": "ok"}
+
 
 @app.post("/api/destinations")
 def destinations_endpoint(request: DestinationRequest):
