@@ -8,8 +8,8 @@ key = os.getenv("GOOGLE_API_KEY")
 
 models_to_try = [
     "gemini-2.5-flash-lite",
-    "gemini-2.0-flash-lite", 
-    "gemini-2.0-flash-lite-001",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
 ]
 
 for model in models_to_try:
@@ -22,7 +22,12 @@ for model in models_to_try:
         text = data["candidates"][0]["content"]["parts"][0]["text"]
         print(f"OK {model}: {text.strip()}")
     except urllib.error.HTTPError as e:
-        body = e.read().decode()[:200]
-        print(f"FAIL {model}: {e.code} - {body}")
+        body = e.read().decode()[:300]
+        print(f"FAIL {model}: {e.code}")
+        if "limit" in body:
+            import re
+            limit_match = re.search(r'limit: (\d+)', body)
+            if limit_match:
+                print(f"  -> Free tier limit: {limit_match.group(1)} requests")
     except Exception as e:
         print(f"FAIL {model}: {e}")

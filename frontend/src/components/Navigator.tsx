@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import Map, { Marker } from "react-map-gl/mapbox";
+import Map, { Marker, MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Clock, Navigation2, RefreshCw, Loader2, Compass } from "lucide-react";
 
@@ -102,35 +102,48 @@ export default function Navigator({ state, destination }: { state: any, destinat
       </div>
 
       {/* Mapbox View (Right 60%) */}
-      <div className="hidden md:block w-[60%] h-full bg-neutral-900 relative">
-        <Map
-          initialViewState={{
-            longitude: itinerary.items[0]?.lng || 0,
-            latitude: itinerary.items[0]?.lat || 0,
-            zoom: 12
-          }}
-          style={{ width: "100%", height: "100%" }}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
-          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1IjoiZHVtbXkiLCJhIjoiY2x4bHRwbWhzMDJhbjJqb20zZjZtdTNheCJ9.dummy"}
-        >
-          {itinerary.items.map((item: any, idx: number) => (
-            <Marker key={idx} longitude={item.lng} latitude={item.lat} anchor="bottom">
-              <div className="bg-emerald-500 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-lg transform -translate-y-4 cursor-pointer hover:scale-110 transition-transform">
-                {idx + 1}
+      <div className="w-full md:w-[60%] h-[50vh] md:h-full bg-neutral-900 relative">
+        {(() => {
+          const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+          if (!mapboxToken) {
+            return (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10 p-8 text-center flex-col">
+                <Compass className="w-16 h-16 text-neutral-500 mb-4 animate-pulse" />
+                <h3 className="text-xl font-bold text-white">Mapbox Token Required</h3>
+                <p className="text-neutral-400 max-w-md mt-2">
+                  To view the interactive route, add your NEXT_PUBLIC_MAPBOX_TOKEN to the .env.local file.
+                  The coordinates ({itinerary.items[0]?.lat}, {itinerary.items[0]?.lng}) are ready to map!
+                </p>
               </div>
-            </Marker>
-          ))}
-        </Map>
-        {!process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10 p-8 text-center flex-col">
-             <Compass className="w-16 h-16 text-neutral-500 mb-4 animate-pulse" />
-             <h3 className="text-xl font-bold text-white">Mapbox Token Required</h3>
-             <p className="text-neutral-400 max-w-md mt-2">
-               To view the interactive route, add your NEXT_PUBLIC_MAPBOX_TOKEN to the .env file.
-               The coordinates ({itinerary.items[0]?.lat}, {itinerary.items[0]?.lng}) are ready to map!
-             </p>
-          </div>
-        )}
+            );
+          }
+          return (
+            <Map
+              ref={(ref) => {
+                if (ref) {
+                  // Force resize after mount to fix black screen issue
+                  setTimeout(() => ref.getMap()?.resize(), 100);
+                }
+              }}
+              initialViewState={{
+                longitude: itinerary.items[0]?.lng || 0,
+                latitude: itinerary.items[0]?.lat || 0,
+                zoom: 12
+              }}
+              style={{ width: "100%", height: "100%" }}
+              mapStyle="mapbox://styles/mapbox/dark-v11"
+              mapboxAccessToken={mapboxToken}
+            >
+              {itinerary.items.map((item: any, idx: number) => (
+                <Marker key={idx} longitude={item.lng} latitude={item.lat} anchor="bottom">
+                  <div className="bg-emerald-500 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-lg transform -translate-y-4 cursor-pointer hover:scale-110 transition-transform">
+                    {idx + 1}
+                  </div>
+                </Marker>
+              ))}
+            </Map>
+          );
+        })()}
       </div>
     </div>
   );

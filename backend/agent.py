@@ -11,8 +11,8 @@ def get_llm():
     return ChatGoogleGenerativeAI(
         model="gemini-2.5-flash-lite",
         temperature=0.7,
-        timeout=15,
-        max_retries=1,
+        timeout=30,
+        max_retries=2,
     )
 
 CONCIERGE_PROMPT = """
