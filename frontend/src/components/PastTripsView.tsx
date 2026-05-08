@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Map, Marker, Popup } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Save, Filter, Edit2, Info, ChevronDown, ChevronUp, Users, Map as MapIcon } from "lucide-react";
+import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Save, Filter, Edit2, Info, ChevronDown, ChevronUp, Users, Map as MapIcon, Compass } from "lucide-react";
 
 const COLORS = [
   "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899", "#06b6d4", "#f97316"
@@ -139,6 +139,21 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     }) || [];
   }, [pastTrips, selectedYear, selectedParticipant, selectedContinent]);
 
+  const stats = useMemo(() => {
+    if (!pastTrips || pastTrips.length === 0) return null;
+    
+    const countries = new Set(filteredTrips.map(t => t.country?.trim()).filter(Boolean));
+    const cities = new Set(filteredTrips.flatMap(t => t.stops?.map((s: any) => s.city?.trim()).filter(Boolean) || []));
+    const participants = new Set(filteredTrips.flatMap(t => t.participants || []));
+    
+    return [
+      { label: "Trips", value: filteredTrips.length, icon: Compass, color: "text-emerald-400", bg: "bg-emerald-500/5" },
+      { label: "Countries", value: countries.size, icon: Globe, color: "text-blue-400", bg: "bg-blue-500/5" },
+      { label: "Cities", value: cities.size, icon: MapPin, color: "text-purple-400", bg: "bg-purple-500/5" },
+      { label: "Squad", value: participants.size, icon: Users, color: "text-orange-400", bg: "bg-orange-500/5" },
+    ];
+  }, [pastTrips, filteredTrips]);
+
   const allPins = useMemo(() => {
     const pins: any[] = [];
     filteredTrips.forEach(trip => {
@@ -161,6 +176,18 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
             {isAdding ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
           </button>
         </div>
+
+        {stats && !isAdding && (
+          <div className="grid grid-cols-4 gap-3 mb-8">
+            {stats.map((stat, i) => (
+              <div key={i} className={`flex flex-col items-center justify-center p-3 rounded-2xl border border-neutral-800 shadow-sm group hover:border-neutral-700 transition-all ${stat.bg}`}>
+                <stat.icon className={`w-4 h-4 mb-1.5 ${stat.color} opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all`} />
+                <span className="text-lg font-black text-neutral-100 leading-none">{stat.value}</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-500 mt-1">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {!isAdding && (
           <div className="space-y-4 mb-8">
