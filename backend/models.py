@@ -33,8 +33,8 @@ class PastTrip(BaseModel):
     id: str
     year: int
     title: Optional[str] = None
-    country: str
-    continent: Optional[str] = None
+    countries: List[str] = Field(default_factory=list)
+    continents: List[str] = Field(default_factory=list)
     participants: List[str] = Field(default_factory=list)
     rating: int = Field(..., ge=1, le=5)
     notes: Optional[str] = None

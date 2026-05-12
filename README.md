@@ -71,3 +71,58 @@ The app operates on a seamless "Feedback Loop" between the user, the LLM, and li
 The app never dictates why it made a choice in an overbearing way (e.g., "Because you are old..."). Instead, it seamlessly presents options that simply *fit*. If the user is a returning visitor to a city, the UI skips the "Top 10 Attractions" list and opens directly to "Neighborhood Deep-Dives." 
 
 **It feels less like an app and more like a partner who just knows you.**
+
+---
+
+## 🚀 Current Status
+
+The Lighthouse Navigator is currently in **Active Prototype** stage.
+
+- **✅ State-Aware Chat:** Functional concierge that extracts User DNA and Trip Context.
+- **✅ Destination Matchmaker:** AI-driven recommendations based on personal preferences.
+- **✅ Itinerary Builder:** Generates daily plans with real-world coordinates and visual summaries.
+- **✅ Past Trips Dashboard:** A full-featured history manager with an interactive global map.
+- **✅ Multi-Country Support:** Trips can now span multiple countries and continents with automatic geocoding.
+- **🔄 Persistence:** Currently using a JSON-based lightweight database (`db.json`) for easy prototyping.
+- **🔄 Search Agent:** Live web search for real-time events is in development.
+
+---
+
+## 🛠️ Getting Started
+
+### 1. Prerequisites
+- **Python 3.10+**
+- **Node.js 18+**
+- **Google Gemini API Key** (for intelligence)
+- **Mapbox Public Token** (for the interactive maps)
+
+### 2. Environment Setup
+Create a `.env` file in the root directory:
+```env
+GOOGLE_API_KEY=your_gemini_key_here
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token_here
+```
+
+### 3. Backend Setup
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+The API will be available at `http://localhost:8000`.
+
+### 4. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open `http://localhost:3000` in your browser.
+
+### 5. Running Migrations (Optional)
+If you are updating from an older version, run the migration script to update your data structure:
+```bash
+python backend/migrate_db.py
+```

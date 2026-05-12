@@ -23,8 +23,9 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
     title: "",
-    country: "",
-    continent: "",
+    countries: [] as string[],
+    countryInput: "",
+    continents: [] as string[],
     participants: [] as string[],
     participantInput: "",
     rating: 5,
@@ -58,7 +59,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
 
   const allContinents = useMemo(() => {
     const c = new Set<string>();
-    pastTrips?.forEach(t => { if (t.continent) c.add(t.continent); });
+    pastTrips?.forEach(t => { t.continents?.forEach((cont: string) => c.add(cont)); });
     return ["All Continents", ...Array.from(c).sort()];
   }, [pastTrips]);
 
@@ -75,8 +76,9 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     setFormData({
       year: trip.year,
       title: trip.title || "",
-      country: trip.country,
-      continent: trip.continent || "",
+      countries: trip.countries || [],
+      countryInput: (trip.countries || []).join(", "),
+      continents: trip.continents || [],
       participants: trip.participants || [],
       participantInput: (trip.participants || []).join(", "),
       rating: trip.rating,
@@ -92,8 +94,9 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     setFormData({
       year: new Date().getFullYear(),
       title: "",
-      country: "",
-      continent: "",
+      countries: [],
+      countryInput: "",
+      continents: [],
       participants: [],
       participantInput: "",
       rating: 5,
@@ -107,9 +110,11 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     setLoading(true);
     try {
       const parts = formData.participantInput.split(",").map(p => p.trim()).filter(p => p);
+      const countries = formData.countryInput.split(",").map(c => c.trim()).filter(c => c);
       const tripData = {
         ...formData,
         participants: parts,
+        countries: countries,
         id: editingId || Math.random().toString(36).substr(2, 9),
       };
 
@@ -134,7 +139,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     return pastTrips?.filter(t => {
       const yearMatch = selectedYear === "All" || t.year.toString() === selectedYear;
       const partMatch = selectedParticipant === "Everyone" || t.participants?.includes(selectedParticipant);
-      const contMatch = selectedContinent === "All Continents" || t.continent === selectedContinent;
+      const contMatch = selectedContinent === "All Continents" || t.continents?.includes(selectedContinent);
       return yearMatch && partMatch && contMatch;
     }) || [];
   }, [pastTrips, selectedYear, selectedParticipant, selectedContinent]);
@@ -142,7 +147,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
   const stats = useMemo(() => {
     if (!pastTrips || pastTrips.length === 0) return null;
     
-    const countries = new Set(filteredTrips.map(t => t.country?.trim()).filter(Boolean));
+    const countries = new Set(filteredTrips.flatMap(t => t.countries || []).map(c => c.trim()).filter(Boolean));
     const cities = new Set(filteredTrips.flatMap(t => t.stops?.map((s: any) => s.city?.trim()).filter(Boolean) || []));
     const participants = new Set(filteredTrips.flatMap(t => t.participants || []));
     
@@ -226,8 +231,10 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                 </div>
               </div>
 
-              <input type="text" value={formData.country} onChange={e => setFormData({...formData, country: e.target.value})} placeholder="Country..." className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500" required/>
-              
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase tracking-widest text-neutral-500 font-bold ml-1">Countries (comma separated)</label>
+                <input type="text" value={formData.countryInput} onChange={e => setFormData({...formData, countryInput: e.target.value})} placeholder="e.g. France, Italy..." className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500" required/>
+              </div>
               <div className="space-y-1">
                 <label className="text-[9px] uppercase tracking-widest text-neutral-500 font-bold ml-1">Participants (comma separated)</label>
                 <input type="text" value={formData.participantInput} onChange={e => setFormData({...formData, participantInput: e.target.value})} placeholder="e.g. Sascha, Jacky, Mom" className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500"/>
@@ -261,8 +268,10 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
               <div key={trip.id} onClick={() => handleTripClick(trip)} className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all group relative cursor-pointer overflow-hidden shadow-sm" style={{ borderLeft: `4px solid ${color}` }}>
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1 pr-6">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-1">{trip.year} • {trip.country} {trip.continent && `• ${trip.continent}`}</p>
-                    <h3 className="font-bold text-neutral-100 text-sm">{trip.title || trip.country}</h3>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-1">
+                      {trip.year} • {trip.countries?.join(", ")} {trip.continents?.length > 0 && `• ${trip.continents.join(", ")}`}
+                    </p>
+                    <h3 className="font-bold text-neutral-100 text-sm">{trip.title || trip.countries?.join(" & ")}</h3>
                     {trip.participants?.length > 0 && (
                        <div className="flex flex-wrap gap-1 mt-2">
                           {trip.participants.map((p: string) => (
@@ -314,11 +323,11 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
             <Popup longitude={popupInfo.lng} latitude={popupInfo.lat} anchor="bottom" onClose={() => setPopupInfo(null)} offset={30} closeButton={false}>
               <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl min-w-[200px]">
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{popupInfo.trip.year} {popupInfo.trip.continent && `• ${popupInfo.trip.continent}`}</span>
+                  <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{popupInfo.trip.year} {popupInfo.trip.continents?.length > 0 && `• ${popupInfo.trip.continents.join(", ")}`}</span>
                   <div className="flex gap-0.5">{[1,2,3,4,5].map(r => <Star key={r} className={`w-2 h-2 ${popupInfo.trip.rating >= r ? "text-yellow-500 fill-current" : "text-neutral-800"}`} />)}</div>
                 </div>
-                <h3 className="font-bold text-white text-sm mb-0.5">{popupInfo.trip.title || popupInfo.trip.country}</h3>
-                <p className="text-xs text-emerald-400 font-medium mb-2">{popupInfo.city}, {popupInfo.trip.country}</p>
+                <h3 className="font-bold text-white text-sm mb-0.5">{popupInfo.trip.title || popupInfo.trip.countries?.join(" & ")}</h3>
+                <p className="text-xs text-emerald-400 font-medium mb-2">{popupInfo.city}, {popupInfo.trip.countries?.join(", ")}</p>
                 {popupInfo.trip.participants?.length > 0 && <div className="flex flex-wrap gap-1 mb-2">{popupInfo.trip.participants.map((p:string) => <span key={p} className="text-[7px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded uppercase">{p}</span>)}</div>}
                 {popupInfo.hotel && <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 mb-2 bg-neutral-800/50 p-1.5 rounded-lg"><Building className="w-3 h-3 text-neutral-600" />{popupInfo.hotel}</div>}
                 {popupInfo.trip.notes && <p className="text-[10px] italic text-neutral-500 border-t border-neutral-800 pt-2 line-clamp-2">"{popupInfo.trip.notes}"</p>}
