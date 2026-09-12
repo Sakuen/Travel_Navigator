@@ -18,3 +18,9 @@ ENV/
 # System
 .DS_Store
 Thumbs.db
+
+# Local travel database (legacy JSON remains untouched on import)
+backend/data/*.sqlite3*
+
+# Local uv download cache
+.uv-cache/

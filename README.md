@@ -2,6 +2,8 @@
 
 A next-generation travel application that replaces static forms with a **State-Aware Conversation**. Lighthouse creates a living, breathing itinerary that adapts to real-world changes, your deep personal history, and real-time conditions.
 
+> **Implementation update:** History-aware recommendations, an editable travel brief, sourced weather/event research, Golden Week avoidance, editable saved itineraries, completion feedback and text travel stories are now implemented. Local persistence uses SQLite with a one-time import of existing JSON. See [the current workflow, setup and limitations](docs/planning-and-memory.md). The architecture and roadmap below include future ambitions.
+
 ## 1. Project Vision
 Traditional travel planning is tedious, relying on overwhelming search results and rigid booking tools. The Lighthouse Navigator acts as a deeply intuitive concierge. It learns your "User DNA", curates bespoke experiences, and dynamically adjusts your journey—even while you are on it.
 
@@ -82,9 +84,10 @@ The Lighthouse Navigator is currently in **Active Prototype** stage.
 - **✅ Destination Matchmaker:** AI-driven recommendations based on personal preferences.
 - **✅ Itinerary Builder:** Generates daily plans with real-world coordinates and visual summaries.
 - **✅ Past Trips Dashboard:** A full-featured history manager with an interactive global map.
+- **✅ My Dreams:** A wishlist with notes, links, priorities, a map, saved AI research summaries and conversion into completed trips while preserving the original research.
 - **✅ Multi-Country Support:** Trips can now span multiple countries and continents with automatic geocoding.
-- **🔄 Persistence:** Currently using a JSON-based lightweight database (`db.json`) for easy prototyping.
-- **🔄 Search Agent:** Live web search for real-time events is in development.
+- **✅ Persistence:** Local SQLite transactions, stable plan IDs and stale-write protection; existing JSON is imported once and retained.
+- **✅ Search:** Gemini Google Search researches seasonal weather and local events; suggestions visibly distinguish sourced assessments from unverified ones.
 
 ---
 
@@ -92,7 +95,8 @@ The Lighthouse Navigator is currently in **Active Prototype** stage.
 
 ### 1. Prerequisites
 - **Python 3.10+**
-- **Node.js 18+**
+- **uv** for Python environments and dependencies ([installation instructions](https://docs.astral.sh/uv/getting-started/installation/))
+- **Node.js 20.9+** (required by the installed Next.js version)
 - **Google Gemini API Key** (for intelligence)
 - **Mapbox Public Token** (for the interactive maps)
 
@@ -100,18 +104,20 @@ The Lighthouse Navigator is currently in **Active Prototype** stage.
 Create a `.env` file in the root directory:
 ```env
 GOOGLE_API_KEY=your_gemini_key_here
+```
+
+Create `frontend/.env.local` for the frontend:
+```env
 NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token_here
 ```
 
 ### 3. Backend Setup
+Run these commands from the repository root:
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-uvicorn main:app --reload
+uv sync --locked
+uv run --locked uvicorn main:app --app-dir backend --reload
 ```
-The API will be available at `http://localhost:8000`.
+The API will be available at `http://localhost:8000`. uv manages the root `.venv`; no manual activation is needed. `pyproject.toml` declares dependencies and `uv.lock` locks their resolved versions. Development dependencies are included by default. See [uv's project workflow](https://docs.astral.sh/uv/guides/projects/).
 
 ### 4. Frontend Setup
 ```bash
@@ -121,8 +127,28 @@ npm run dev
 ```
 Open `http://localhost:3000` in your browser.
 
-### 5. Running Migrations (Optional)
-If you are updating from an older version, run the migration script to update your data structure:
+### 5. Checks and Dependency Changes
 ```bash
-python backend/migrate_db.py
+uv run --locked python -B -m unittest discover -s backend -p test_planning.py
+uv add package-name
+uv add --dev development-package-name
 ```
+
+Commit `pyproject.toml` and `uv.lock` together when changing dependencies. The backend requirements files are generated compatibility exports; do not edit them manually. Refresh them after dependency changes:
+
+```bash
+uv export --locked --no-dev --no-hashes --no-emit-project --output-file backend/requirements.txt
+uv export --locked --only-dev --no-hashes --no-emit-project --output-file backend/requirements-dev.txt
+```
+
+The dev-only export contains test tooling; pip-only consumers must install both exports. Normal development uses `uv sync --locked`.
+
+### 6. Existing Data
+
+The backend automatically imports `backend/data/db.json` into SQLite on first access and leaves the JSON unchanged. Do not run `migrate_db.py` as a routine setup step: it only updates legacy JSON, not the SQLite database. See [storage and migration details](docs/planning-and-memory.md#storage-and-migration).
+
+## Next Direction: Accounts, Shared Trips and iPhone
+
+Real accounts and trip-level authorization are the next foundation for shared use. The current profile chooser is not authentication. We are working toward two personal accounts, separate preferences and feedback, and shared trips and memories, followed by an iPhone Home Screen PWA.
+
+See [the development direction](docs/development-direction.md) for design constraints to preserve as features are added. Hosting and PWA installation are future work, not current capabilities.

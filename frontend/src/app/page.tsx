@@ -2,33 +2,39 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Compass, ArrowRight, User as UserIcon, LogOut, History, Trash2, Globe, ArrowLeft, Star, MapPin, X } from "lucide-react";
+import { Send, Compass, LogOut, History, Trash2, ArrowLeft, Star, MapPin, X } from "lucide-react";
 import Matchmaker from "../components/Matchmaker";
 import Navigator from "../components/Navigator";
 import Auth from "../components/Auth";
 import ModelSelector from "../components/ModelSelector";
+import AiUsage from "../components/AiUsage";
+import { readApiError, refreshAiUsage } from "../lib/api-error";
 import PastTripsView from "../components/PastTripsView";
+import DreamsView from "../components/DreamsView";
+import type { AppState, UserData, Destination, SavedTrip } from "../types/travel";
+import TravelBrief, { initialBrief } from "../components/TravelBrief";
 
 export default function Home() {
   const [user, setUser] = useState<string | null>(null);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
-  const [currentView, setCurrentView] = useState<"chat" | "past-trips" | "itinerary">("chat");
+  const [currentView, setCurrentView] = useState<"chat" | "past-trips" | "dreams" | "itinerary">("chat");
   
   const [messages, setMessages] = useState<{role: string, content: string}[]>([
     { role: "assistant", content: "Hello! I'm your Lighthouse Navigator. Where are you dreaming of going, and who's coming with you?" }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDestination, setSelectedDestination] = useState<any>(null);
-  const [savedTripView, setSavedTripView] = useState<any>(null);
+  const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
+  const [savedTripView, setSavedTripView] = useState<SavedTrip | null>(null);
+  const [briefConfirmed, setBriefConfirmed] = useState(false);
   
-  const [state, setState] = useState({
+  const [state, setState] = useState<AppState>({
     username: null as string | null,
     user_dna: { hard_nos: [], soft_likes: [], past_footprints: [] },
-    trip_context: { destination: null, dates: null, budget: null, group_size: null, status_flags: [] },
-    past_trips: [] as any[],
+    trip_context: { ...initialBrief },
+    past_trips: [],
     is_brief_complete: false
   });
 
@@ -72,11 +78,12 @@ export default function Home() {
     setSavedTripView(null);
     setShowHistory(false);
     setCurrentView("chat");
+    setBriefConfirmed(false);
     setMessages([{ role: "assistant", content: "Hello! I'm your Lighthouse Navigator. Where are you dreaming of going, and who's coming with you?" }]);
     setState({
       username: null,
       user_dna: { hard_nos: [], soft_likes: [], past_footprints: [] },
-      trip_context: { destination: null, dates: null, budget: null, group_size: null, status_flags: [] },
+      trip_context: { ...initialBrief },
       past_trips: [],
       is_brief_complete: false
     });
@@ -104,7 +111,8 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        setMessages(prev => [...prev, { role: "assistant", content: "⚠️ The server is temporarily unavailable. Please retry." }]);
+        const failure = await readApiError(response);
+        setMessages(prev => [...prev, { role: "assistant", content: failure.message }]);
         return;
       }
 
@@ -114,7 +122,7 @@ export default function Home() {
         setState(prev => ({
           ...prev,
           user_dna: data.state_updates.user_dna || prev.user_dna,
-          trip_context: data.state_updates.trip_context || prev.trip_context,
+          trip_context: data.state_updates.trip_context ? { ...prev.trip_context, ...data.state_updates.trip_context } : prev.trip_context,
           is_brief_complete: data.state_updates.is_brief_complete
         }));
       }
@@ -125,6 +133,7 @@ export default function Home() {
       setMessages(prev => [...prev, { role: "assistant", content: "⚠️ Connection error." }]);
     } finally {
       setIsLoading(false);
+      refreshAiUsage();
     }
   };
 
@@ -136,14 +145,14 @@ export default function Home() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans overflow-hidden">
       {/* Header */}
       <header className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-50 px-6 py-4 transition-all">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 sm:gap-8 shrink-0">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2 sm:gap-8 min-w-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setCurrentView("chat"); setSelectedDestination(null); setSavedTripView(null); }}>
               <Compass className="w-6 h-6 text-emerald-400 group-hover:rotate-45 transition-transform" />
               <span className="font-bold text-lg tracking-tight hidden xs:block">Lighthouse</span>
             </div>
             
-            <nav className="hidden md:flex items-center gap-1 bg-neutral-800/50 p-1 rounded-xl border border-neutral-700/50">
+            <nav className="flex flex-wrap items-center gap-1 min-w-0 bg-neutral-800/50 p-1 rounded-xl border border-neutral-700/50">
               <button 
                 onClick={() => { setCurrentView("chat"); setSelectedDestination(null); setSavedTripView(null); }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${currentView === "chat" ? "bg-emerald-500 text-white shadow-lg" : "text-neutral-400 hover:text-white"}`}
@@ -154,13 +163,20 @@ export default function Home() {
                 onClick={() => setCurrentView("past-trips")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${currentView === "past-trips" ? "bg-emerald-500 text-white shadow-lg" : "text-neutral-400 hover:text-white"}`}
               >
-                My Travels
-              </button>
+                  My Travels
+                </button>
+                <button onClick={() => setCurrentView("dreams")} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${currentView === "dreams" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-white"}`}>My Dreams</button>
+              <button onClick={() => {
+                setSelectedDestination(null); setSavedTripView(null); setCurrentView("chat"); setBriefConfirmed(false);
+                setState(prev => ({ ...prev, trip_context: { ...initialBrief }, is_brief_complete: false }));
+                setMessages([{ role: "assistant", content: "Let’s plan a new trip. When would you like to go, and what kind of experience are you looking for?" }]);
+              }} className="px-3 py-1.5 text-xs text-neutral-300">New trip</button>
             </nav>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
             <ModelSelector selectedModel={selectedModel} onSelect={setSelectedModel} />
+            <AiUsage model={selectedModel} />
             
             <div className="flex items-center gap-1 sm:gap-2 shrink-0 border-l border-neutral-800 pl-4 ml-2">
               <button 
@@ -199,18 +215,18 @@ export default function Home() {
               <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <History className="w-5 h-5 text-emerald-400" />
-                  Your Future Plans
+                  Your Saved Trips
                 </h2>
                 <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 grid gap-4 grid-cols-1 md:grid-cols-2">
-                {userData?.saved_trips?.length > 0 ? (
-                  userData.saved_trips.map((trip: any) => (
+                {userData && userData.saved_trips.length > 0 ? (
+                  userData.saved_trips.map((trip: SavedTrip) => (
                     <div key={trip.id} className="p-4 rounded-2xl bg-neutral-800/50 border border-neutral-700/50 hover:border-emerald-500/30 flex flex-col gap-3 group transition-all">
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-bold text-neutral-100">{trip.trip_title}</h3>
-                          <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">{trip.total_days} Days</p>
+                          <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">{trip.total_days} Days · {trip.status || "draft"}</p>
                         </div>
                         <button onClick={() => {
                           fetch(`/api/users/${user}/trips/${trip.id}`, { method: "DELETE" }).then(() => refreshUserData(user!));
@@ -222,7 +238,7 @@ export default function Home() {
                         onClick={() => {
                           setSavedTripView(trip);
                           setShowHistory(false);
-                          setSelectedDestination({ name: trip.trip_title });
+                          setSelectedDestination(trip.destination || { name: trip.trip_title });
                           setCurrentView("itinerary");
                         }}
                         className="w-full py-2 bg-emerald-500 text-white rounded-xl shadow-lg hover:bg-emerald-400 transition-all text-xs font-bold"
@@ -245,15 +261,20 @@ export default function Home() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
-          {currentView === "past-trips" ? (
+          {currentView === "dreams" ? (
+            <motion.div key="dreams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0">
+              <DreamsView key={user!} username={user!} selectedModel={selectedModel} onUpdate={() => refreshUserData(user!)} onTravels={() => setCurrentView("past-trips")} />
+            </motion.div>
+          ) : currentView === "past-trips" ? (
             <motion.div key="past" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="absolute inset-0">
               <PastTripsView username={user!} pastTrips={userData?.past_trips || []} onUpdate={() => refreshUserData(user!)} />
             </motion.div>
           ) : (selectedDestination || savedTripView) ? (
             <motion.div key="itinerary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0">
               <Navigator 
+                key={savedTripView?.id || selectedDestination?.id}
                 state={state} 
-                destination={selectedDestination} 
+                destination={selectedDestination || { name: savedTripView?.trip_title || "Trip" }}
                 savedTripData={savedTripView} 
                 selectedModel={selectedModel}
                 onSaveTrip={() => refreshUserData(user!)}
@@ -267,7 +288,10 @@ export default function Home() {
             </motion.div>
           ) : state.is_brief_complete ? (
             <motion.div key="match" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 overflow-y-auto">
-              <Matchmaker state={state} selectedModel={selectedModel} onSelectDestination={(dest) => { setSelectedDestination(dest); setCurrentView("itinerary"); }} />
+              {briefConfirmed ? <Matchmaker state={state} selectedModel={selectedModel} onEditBrief={() => setBriefConfirmed(false)} onSelectDestination={(dest) => { setSelectedDestination(dest); setCurrentView("itinerary"); }} /> :
+                <TravelBrief context={state.trip_context} historyCount={state.past_trips.length}
+                  onBack={() => setState(prev => ({ ...prev, is_brief_complete: false }))}
+                  onConfirm={brief => { setState(prev => ({ ...prev, trip_context: brief })); setBriefConfirmed(true); }} />}
             </motion.div>
           ) : (
             <motion.main key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 max-w-3xl w-full mx-auto p-4 md:p-8 flex flex-col h-full relative">
@@ -352,4 +376,3 @@ export default function Home() {
     </div>
   );
 }
-

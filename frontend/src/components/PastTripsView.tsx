@@ -4,21 +4,38 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Map, Marker, Popup } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Save, Filter, Edit2, Info, ChevronDown, ChevronUp, Users, Map as MapIcon, Compass } from "lucide-react";
+import { Plus, Trash2, Star, Globe, Calendar, Building, MapPin, X, Loader2, Edit2, Users, Map as MapIcon, Compass } from "lucide-react";
+
+import type { PastTrip, PastTripStop } from "../types/travel";
+import { readApiError, refreshAiUsage } from "../lib/api-error";
+type MapPinData = PastTripStop & { lat: number; lng: number; trip: PastTrip; color?: string };
 
 const COLORS = [
   "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899", "#06b6d4", "#f97316"
 ];
 
-export default function PastTripsView({ username, pastTrips, onUpdate }: { username: string, pastTrips: any[], onUpdate: () => void }) {
+export default function PastTripsView({ username, pastTrips, onUpdate }: { username: string, pastTrips: PastTrip[], onUpdate: () => void }) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState<string | null>(null);
+  const [summaryError, setSummaryError] = useState("");
+
+  const generateSummary = async (tripId: string) => {
+    setSummaryLoading(tripId); setSummaryError("");
+    try {
+      const response = await fetch(`/api/users/${username}/past-trips/${tripId}/summary`, { method: "POST" });
+      if (!response.ok) throw await readApiError(response);
+      onUpdate();
+    } catch (error) { setSummaryError(error instanceof Error ? error.message : "Summary unavailable."); }
+    finally { setSummaryLoading(null); refreshAiUsage(); }
+  };
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [selectedParticipant, setSelectedParticipant] = useState<string>("Everyone");
   const [selectedContinent, setSelectedContinent] = useState<string>("All Continents");
   const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
-  const [popupInfo, setPopupInfo] = useState<any | null>(null);
+  const [popupInfo, setPopupInfo] = useState<MapPinData | null>(null);
   
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
@@ -30,7 +47,10 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     participantInput: "",
     rating: 5,
     notes: "",
-    stops: [{ city: "", hotel: "" }]
+    liked: "",
+    disliked: "",
+    would_revisit: "unsure",
+    stops: [{ city: "", hotel: "" }] as PastTripStop[]
   });
 
   const [viewState, setViewState] = useState({
@@ -63,15 +83,15 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     return ["All Continents", ...Array.from(c).sort()];
   }, [pastTrips]);
 
-  const handleTripClick = (trip: any) => {
-    const firstValidStop = trip.stops?.find((s: any) => s.lat && s.lng);
-    if (firstValidStop) {
+  const handleTripClick = (trip: PastTrip) => {
+    const firstValidStop = trip.stops?.find((s: PastTripStop) => s.lat != null && s.lng != null);
+    if (firstValidStop && firstValidStop.lat != null && firstValidStop.lng != null) {
       setViewState({ longitude: firstValidStop.lng, latitude: firstValidStop.lat, zoom: 6 });
-      setPopupInfo({ ...firstValidStop, trip });
+      setPopupInfo({ ...firstValidStop, lat: firstValidStop.lat!, lng: firstValidStop.lng!, trip });
     }
   };
 
-  const startEdit = (trip: any) => {
+  const startEdit = (trip: PastTrip) => {
     setEditingId(trip.id);
     setFormData({
       year: trip.year,
@@ -83,6 +103,9 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
       participantInput: (trip.participants || []).join(", "),
       rating: trip.rating,
       notes: trip.notes || "",
+      liked: (trip.liked || []).join("\n"),
+      disliked: (trip.disliked || []).join("\n"),
+      would_revisit: trip.would_revisit === true ? "yes" : trip.would_revisit === false ? "no" : "unsure",
       stops: trip.stops || [{ city: "", hotel: "" }]
     });
     setIsAdding(true);
@@ -101,13 +124,17 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
       participantInput: "",
       rating: 5,
       notes: "",
-      stops: [{ city: "", hotel: "" }]
+      liked: "",
+      disliked: "",
+      would_revisit: "unsure",
+      stops: [{ city: "", hotel: "" }] as PastTripStop[]
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setSaveError("");
     try {
       const parts = formData.participantInput.split(",").map(p => p.trim()).filter(p => p);
       const countries = formData.countryInput.split(",").map(c => c.trim()).filter(c => c);
@@ -115,7 +142,10 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
         ...formData,
         participants: parts,
         countries: countries,
-        id: editingId || Math.random().toString(36).substr(2, 9),
+        id: editingId || crypto.randomUUID(),
+        liked: formData.liked.split("\n").map(s => s.trim()).filter(Boolean),
+        disliked: formData.disliked.split("\n").map(s => s.trim()).filter(Boolean),
+        would_revisit: formData.would_revisit === "unsure" ? null : formData.would_revisit === "yes",
       };
 
       const res = await fetch(`/api/users/${username}/past-trips`, {
@@ -127,9 +157,10 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
       if (res.ok) {
         onUpdate();
         cancelEdit();
-      }
+      } else { setSaveError("Could not save your trip. Please retry."); }
     } catch (e) {
       console.error("Save error:", e);
+      setSaveError("Could not connect. Your edits are still here; please retry.");
     } finally {
       setLoading(false);
     }
@@ -148,7 +179,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
     if (!pastTrips || pastTrips.length === 0) return null;
     
     const countries = new Set(filteredTrips.flatMap(t => t.countries || []).map(c => c.trim()).filter(Boolean));
-    const cities = new Set(filteredTrips.flatMap(t => t.stops?.map((s: any) => s.city?.trim()).filter(Boolean) || []));
+    const cities = new Set(filteredTrips.flatMap(t => t.stops?.map((s: PastTripStop) => s.city?.trim()).filter(Boolean) || []));
     const participants = new Set(filteredTrips.flatMap(t => t.participants || []));
     
     return [
@@ -160,11 +191,11 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
   }, [pastTrips, filteredTrips]);
 
   const allPins = useMemo(() => {
-    const pins: any[] = [];
+    const pins: MapPinData[] = [];
     filteredTrips.forEach(trip => {
       const color = getTripColor(trip.id);
-      trip.stops?.forEach((stop: any) => {
-        if (stop.lat && stop.lng) pins.push({ ...stop, trip, color });
+      trip.stops?.forEach((stop: PastTripStop) => {
+        if (stop.lat != null && stop.lng != null) pins.push({ ...stop, lat: stop.lat, lng: stop.lng, trip, color });
       });
     });
     return pins;
@@ -241,6 +272,11 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
               </div>
 
               <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Notes & Memories..." className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-emerald-500 min-h-[80px]"/>
+              <p className="text-xs text-emerald-300">These experiences will inform your next recommendations.</p>
+              <label className="block text-xs text-neutral-400">What we loved (one idea per line)<textarea value={formData.liked} onChange={e => setFormData({...formData, liked: e.target.value})} placeholder="Quiet coastal walks\nSmall family-run hotels" className="mt-2 w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm" /></label>
+              <label className="block text-xs text-neutral-400">What we’d avoid next time<textarea value={formData.disliked} onChange={e => setFormData({...formData, disliked: e.target.value})} placeholder="Crowded attractions\nToo many hotel changes" className="mt-2 w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2 text-sm" /></label>
+              <label className="block text-xs text-neutral-400">Would we go back?<select value={formData.would_revisit} onChange={e => setFormData({...formData, would_revisit: e.target.value})} className="mt-2 w-full bg-neutral-800 rounded-xl p-2"><option value="unsure">Not sure yet</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+              {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
               
               <div className="space-y-3">
                 {formData.stops.map((stop, idx) => (
@@ -260,6 +296,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
           )}
         </AnimatePresence>
 
+        {summaryError && <p role="alert" className="text-red-300 text-sm mb-3">{summaryError}</p>}
         <div className="space-y-4 pb-20">
           {filteredTrips.sort((a,b) => b.year - a.year).map((trip) => {
             const color = getTripColor(trip.id);
@@ -269,10 +306,10 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1 pr-6">
                     <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-1">
-                      {trip.year} • {trip.countries?.join(", ")} {trip.continents?.length > 0 && `• ${trip.continents.join(", ")}`}
+                      {trip.year} • {trip.countries?.join(", ")} {(trip.continents && trip.continents.length > 0) && `• ${trip.continents.join(", ")}`}
                     </p>
                     <h3 className="font-bold text-neutral-100 text-sm">{trip.title || trip.countries?.join(" & ")}</h3>
-                    {trip.participants?.length > 0 && (
+                    {(trip.participants && trip.participants.length > 0) && (
                        <div className="flex flex-wrap gap-1 mt-2">
                           {trip.participants.map((p: string) => (
                              <span key={p} className="text-[8px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">{p}</span>
@@ -286,7 +323,7 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                   </div>
                 </div>
                 <div className="space-y-2 mb-3">
-                  {trip.stops?.map((s: any, i: number) => (
+                  {trip.stops?.map((s: PastTripStop, i: number) => (
                     <div key={i} className="flex items-start gap-2 text-[11px] text-neutral-400">
                       <div className="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: color }} />
                       <span className="font-medium text-neutral-300">{s.city}</span>
@@ -296,10 +333,21 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
                 </div>
                 {trip.notes && (
                   <div className="mt-3 pt-3 border-t border-neutral-800/50">
-                    <p className={`text-[11px] italic text-neutral-500 leading-relaxed ${isExpanded ? "" : "line-clamp-2"}`}>"{trip.notes}"</p>
+                    <p className={`text-[11px] italic text-neutral-500 leading-relaxed ${isExpanded ? "" : "line-clamp-2"}`}>&ldquo;{trip.notes}&rdquo;</p>
                     <button onClick={(e) => { e.stopPropagation(); setExpandedNotes(isExpanded ? null : trip.id); }} className="text-[9px] font-bold text-neutral-600 hover:text-emerald-400 mt-1 uppercase">{isExpanded ? "Show Less" : "Read More"}</button>
                   </div>
                 )}
+                {(trip.liked && trip.liked.length > 0) && <p className="text-xs text-emerald-300 mt-3">Loved: {trip.liked.join(" · ")}</p>}
+                {(trip.disliked && trip.disliked.length > 0) && <p className="text-xs text-orange-300 mt-2">Avoid next time: {trip.disliked.join(" · ")}</p>}
+                <button disabled={!!summaryLoading} onClick={e => { e.stopPropagation(); generateSummary(trip.id); }} className="mt-4 text-xs text-emerald-300 underline disabled:opacity-40">{summaryLoading === trip.id ? "Writing your story…" : trip.generated_story ? "Rewrite travel story" : "Create travel story"}</button>
+                {trip.generated_story && <article className="mt-5 rounded-2xl bg-stone-100 text-stone-800 p-5 cursor-text" onClick={e => e.stopPropagation()}>
+                  <p className="text-[10px] uppercase tracking-widest text-stone-500">Our travel journal · {trip.year}</p>
+                  <h4 className="font-serif text-2xl mt-2">{trip.generated_story.title}</h4>
+                  <p className="text-sm italic mt-3">{trip.generated_story.introduction}</p>
+                  <ul className="list-disc pl-4 my-4 text-xs space-y-2">{trip.generated_story.highlights?.map((highlight: string, i: number) => <li key={i}>{highlight}</li>)}</ul>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{trip.generated_story.story}</p>
+                  <p className="text-[10px] text-stone-500 mt-4">AI draft from your recorded memories. Edit the trip to correct or add details, then rewrite.</p>
+                </article>}
                 <div className="flex gap-0.5 mt-3">
                   {[1,2,3,4,5].map(r => <Star key={r} className={`w-2.5 h-2.5 ${trip.rating >= r ? "text-yellow-500 fill-current" : "text-neutral-800"}`} />)}
                 </div>
@@ -323,14 +371,14 @@ export default function PastTripsView({ username, pastTrips, onUpdate }: { usern
             <Popup longitude={popupInfo.lng} latitude={popupInfo.lat} anchor="bottom" onClose={() => setPopupInfo(null)} offset={30} closeButton={false}>
               <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl min-w-[200px]">
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{popupInfo.trip.year} {popupInfo.trip.continents?.length > 0 && `• ${popupInfo.trip.continents.join(", ")}`}</span>
+                  <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{popupInfo.trip.year} {(popupInfo.trip.continents && popupInfo.trip.continents.length > 0) && `• ${popupInfo.trip.continents.join(", ")}`}</span>
                   <div className="flex gap-0.5">{[1,2,3,4,5].map(r => <Star key={r} className={`w-2 h-2 ${popupInfo.trip.rating >= r ? "text-yellow-500 fill-current" : "text-neutral-800"}`} />)}</div>
                 </div>
                 <h3 className="font-bold text-white text-sm mb-0.5">{popupInfo.trip.title || popupInfo.trip.countries?.join(" & ")}</h3>
                 <p className="text-xs text-emerald-400 font-medium mb-2">{popupInfo.city}, {popupInfo.trip.countries?.join(", ")}</p>
-                {popupInfo.trip.participants?.length > 0 && <div className="flex flex-wrap gap-1 mb-2">{popupInfo.trip.participants.map((p:string) => <span key={p} className="text-[7px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded uppercase">{p}</span>)}</div>}
+                {(popupInfo.trip.participants && popupInfo.trip.participants.length > 0) && <div className="flex flex-wrap gap-1 mb-2">{popupInfo.trip.participants.map((p:string) => <span key={p} className="text-[7px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded uppercase">{p}</span>)}</div>}
                 {popupInfo.hotel && <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 mb-2 bg-neutral-800/50 p-1.5 rounded-lg"><Building className="w-3 h-3 text-neutral-600" />{popupInfo.hotel}</div>}
-                {popupInfo.trip.notes && <p className="text-[10px] italic text-neutral-500 border-t border-neutral-800 pt-2 line-clamp-2">"{popupInfo.trip.notes}"</p>}
+                {popupInfo.trip.notes && <p className="text-[10px] italic text-neutral-500 border-t border-neutral-800 pt-2 line-clamp-2">&ldquo;{popupInfo.trip.notes}&rdquo;</p>}
               </div>
             </Popup>
           )}

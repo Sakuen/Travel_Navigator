@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Cpu, ChevronDown, Zap, Shield, Sparkles, Activity } from "lucide-react";
+import { Cpu, ChevronDown, Shield, Activity } from "lucide-react";
 import { useState } from "react";
 
 const MODELS = [
@@ -59,7 +59,7 @@ export default function ModelSelector({ selectedModel, onSelect }: { selectedMod
             <div className="p-3 bg-neutral-950 border-t border-neutral-800">
               <p className="text-[10px] text-neutral-600 flex items-center gap-1">
                 <Cpu className="w-3 h-3" />
-                Select model to bypass local quota limits.
+                Limits vary by model and Google project. Switching models may not resolve a quota error.
               </p>
             </div>
           </motion.div>
