@@ -21,7 +21,8 @@
         "luxury",
         "adventure",
         "1 main activity per day",
-        "child-friendly activities"
+        "child-friendly activities",
+        "beach"
       ],
       "past_footprints": []
     },
@@ -146,7 +147,9 @@
         "countries": [
           "Thailand"
         ],
-        "continents": []
+        "continents": [
+          "Asia"
+        ]
       },
       {
         "id": "5cjzjo2t3",
@@ -169,7 +172,9 @@
         "countries": [
           "Spain"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "hdv4m5z21",
@@ -192,7 +197,9 @@
         "countries": [
           "France"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "rinh7w182",
@@ -228,7 +235,9 @@
         "countries": [
           "Turkey"
         ],
-        "continents": []
+        "continents": [
+          "Asia"
+        ]
       },
       {
         "id": "ztqo0nhyz",
@@ -252,7 +261,9 @@
         "countries": [
           "Austria"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "8tp9ze45f",
@@ -282,7 +293,9 @@
         "countries": [
           "Italy"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "yxfhy85y8",
@@ -304,7 +317,9 @@
         "countries": [
           "Italy"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "r2000m5nt",
@@ -334,7 +349,9 @@
         "countries": [
           "Italy"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "x2b5r36ur",
@@ -364,7 +381,9 @@
         "countries": [
           "Spain"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "c6s9dgmbs",
@@ -388,7 +407,9 @@
         "countries": [
           "Spain"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "dd45k9uid",
@@ -412,7 +433,9 @@
         "countries": [
           "Austria"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "mrggp172s",
@@ -436,7 +459,9 @@
         "countries": [
           "Portugal"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "zkw104jqb",
@@ -460,7 +485,9 @@
         "countries": [
           "Greece"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "lysmt57v8",
@@ -483,7 +510,9 @@
         "countries": [
           "Italy"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "52w69w7vy",
@@ -506,7 +535,9 @@
         "countries": [
           "Greece"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "6t2uuzkjo",
@@ -529,7 +560,9 @@
         "countries": [
           "Malta"
         ],
-        "continents": []
+        "continents": [
+          "Europe"
+        ]
       },
       {
         "id": "h5w555g54",
@@ -678,7 +711,7 @@
           "Italy"
         ],
         "continents": [
-          "Unknown"
+          "Europe"
         ]
       },
       {
@@ -729,7 +762,7 @@
           "Germany"
         ],
         "continents": [
-          "Unknown"
+          "Europe"
         ]
       },
       {
@@ -809,7 +842,7 @@
           "Grossbritannien"
         ],
         "continents": [
-          "Unknown"
+          "Europe"
         ]
       },
       {
@@ -1224,7 +1257,9 @@
           "Spain",
           "Portugal"
         ],
-        "continents": [],
+        "continents": [
+          "Africa"
+        ],
         "participants": [
           "Sascha",
           "Jacky",
@@ -1286,7 +1321,7 @@
           "Taiwan"
         ],
         "continents": [
-          "Unknown"
+          "Asia"
         ],
         "participants": [
           "Sascha",
@@ -1459,14 +1494,14 @@
           {
             "city": "Utrecht",
             "hotel": "",
-            "lat": 52.385,
-            "lng": 9.58
+            "lat": 52.0907,
+            "lng": 5.1214
           },
           {
             "city": "Rotterdam",
             "hotel": "",
-            "lat": 51.221,
-            "lng": 4.3997
+            "lat": 51.9225,
+            "lng": 4.47917
           },
           {
             "city": "Antwerpen",
@@ -1503,7 +1538,6 @@
           "Singapore"
         ],
         "continents": [
-          "Unknown",
           "Asia"
         ],
         "participants": [
@@ -1592,7 +1626,7 @@
           "Dubai"
         ],
         "continents": [
-          "Unknown"
+          "Asia"
         ],
         "participants": [
           "Sascha",
@@ -1616,7 +1650,9 @@
         "countries": [
           "Hungary"
         ],
-        "continents": [],
+        "continents": [
+          "Europe"
+        ],
         "participants": [
           "Sascha",
           "Jacky"

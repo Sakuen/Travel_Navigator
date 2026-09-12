@@ -9,9 +9,9 @@ from models import AppStateUpdate, UserDNA, TripContext
 
 import time
 
-def get_llm(model_name: str = "gemini-2.5-flash"):
+def get_llm(model_name: str = "gemini-flash-latest"):
     # Fallback to flash if none provided
-    actual_model = model_name or "gemini-2.5-flash"
+    actual_model = model_name or "gemini-flash-latest"
 
     return ChatGoogleGenerativeAI(
         model=actual_model,
@@ -235,17 +235,27 @@ def geocode_location(city: str, country: str, model_name: str = None) -> dict:
     llm = get_llm(model_name)
     
     class GeoCoord(BaseModel):
-        lat: float
-        lng: float
-        continent: str = Field(..., description="The continent this location is in (e.g. Europe, Asia, North America)")
+        lat: float = Field(..., description="The latitude of the city center")
+        lng: float = Field(..., description="The longitude of the city center")
+        continent: str = Field(..., description="The continent name (e.g., 'Europe', 'Asia', 'North America', 'South America', 'Africa', 'Oceania', 'Antarctica')")
+        country_confirmed: str = Field(..., description="The confirmed country for this city")
 
     structured_llm = llm.with_structured_output(GeoCoord)
     
-    prompt = f"Provide the approximate latitude, longitude, and continent for the center of {city}, {country}."
+    prompt = f"""
+    Find the approximate real-world coordinates and continent for the city of '{city}'.
+    Context: The user mentioned this city in the context of these countries: '{country}'.
+    
+    Return:
+    - Latitude and Longitude of the city center.
+    - The exact name of the continent.
+    - The confirmed country name.
+    """
     
     try:
         result = safe_invoke(structured_llm, [HumanMessage(content=prompt)])
         return result.model_dump()
-    except:
-        return {"lat": 0, "lng": 0, "continent": "Unknown"}
+    except Exception as e:
+        print(f"Geocoding failed for {city}: {e}")
+        return {"lat": 0, "lng": 0, "continent": "Unknown", "country_confirmed": "Unknown"}
 
